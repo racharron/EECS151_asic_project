@@ -3,6 +3,8 @@ hammer-vlsi*.log
 output.json
 build/
 
+.idea
+
 # ASM/Benchmarks
 *.bin
 *.hex
