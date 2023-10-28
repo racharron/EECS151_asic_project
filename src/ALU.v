@@ -17,6 +17,23 @@ module ALU(
     output reg [31:0] Out
 );
 
-    // Implement your ALU here, then delete this comment
-
+reg [31:0] out_internal;
+always @(*) begin
+    case (ALUop)
+        `ALU_ADD: out_internal = A + B;     
+        `ALU_SUB: out_internal = A - B;    
+        `ALU_AND: out_internal = A & B;    
+        `ALU_OR: out_internal = A | B;     
+        `ALU_XOR: out_internal = A ^ B;    
+        `ALU_SLT: out_internal = ($signed(A) < $signed(B)) ? 32'b1 : 32'b0;    
+        `ALU_SLTU: out_internal = (A < B) ? 32'b1 : 32'b0;
+        `ALU_SLL: out_internal = A << B[4:0];    
+        `ALU_SRA: out_internal = $signed(A) >>> B[4:0];    
+        `ALU_SRL: out_internal = A >> B[4:0];   
+        `ALU_COPY_B: out_internal = B;
+        `ALU_XXX: out_internal = 32'b0;
+        default: out_internal = A + B;     
+    endcase
+end
+assign Out = out_internal;
 endmodule

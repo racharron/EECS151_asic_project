@@ -133,6 +133,27 @@ module ALUTestbench();
             REFout = A + B;
             #1;
             checkOutput(opcode, funct, add_rshift_type);
+            
+            opcode = `OPC_JAL;
+            funct = $random & 3'b111;
+            add_rshift_type = $random & 1'b1;
+            REFout = A + B;
+            #1;
+            checkOutput(opcode, funct, add_rshift_type);
+
+            opcode = `OPC_JALR;
+            funct = $random & 3'b111;
+            add_rshift_type = $random & 1'b1;
+            REFout = A + B;
+            #1;
+            checkOutput(opcode, funct, add_rshift_type);
+
+            // opcode = `OPC_ARI_RTYPE;
+            // funct = $random & 3'b111;
+            // add_rshift_type = $random & 1'b1;
+            // REFout = A + B;
+            // #1;
+            // checkOutput(opcode, funct, add_rshift_type);
 
         end
         ///////////////////////////////
