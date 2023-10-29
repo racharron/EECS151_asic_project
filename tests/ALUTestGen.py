@@ -78,7 +78,7 @@ functs_itype = \
 functs_rtype = \
 {
     "ADD":     ("000", "0", lambda a,b: a+b, lambda a: a, lambda b: b),
-    "SUB":     ("000", "1", lambda a,b: a-b, lambda a: a, lambda b: b),
+    "SUB":     ("000", "1", lambda a,b: sub(a, b), lambda a: a, lambda b: b),
     "SLL":     ("001", "0", lambda a, b: a << b, lambda a: a, lambda b: b&0x1f),
     "SLT":     ("010", "0", lambda a, b: (lambda: 0, lambda: 1)[comp(a, b)](), lambda a: a, lambda b: b),
     "SLTU":    ("011", "0", lambda a, b: (lambda: 0, lambda: 1)[a < b](), lambda a: a, lambda b: b),
@@ -98,7 +98,7 @@ def gen_vector(op, f, a, b, opcode, funct3, funct7):
     REFout = f(A,B)
     return ''.join([opcode, funct3, funct7, bin(A, 32), bin(B, 32), bin(REFout, 32)])
 
-loops = 5
+loops = 30
 
 for i in range(loops):
     for opcode, tup in opcodes.items():

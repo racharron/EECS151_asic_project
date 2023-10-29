@@ -35,6 +35,7 @@ always @(*) begin
             ALUop = `ALU_ADD;
           end else if (add_rshift_type == `FNC2_SUB) begin
             ALUop = `ALU_SUB;
+            $display("hello");
           end
         end
         `FNC_SLL: ALUop = `ALU_SLL;
