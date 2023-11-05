@@ -4,6 +4,7 @@ clockPeriodby5: &CLK_PERIOD_BY_5 "4.0" # used for pin delays, update accordingly
 verilogSrc: &VERILOG_SRC
   - "src/ALUdec.v"
   - "src/ALU.v"
+  - "src/EECS151.v"
   - "src/Cache.v"
   - "src/Memory151.v"
   - "src/Riscv151.v"
@@ -12,7 +13,8 @@ verilogSrc: &VERILOG_SRC
   - "src/Decoder.v"
   - "src/regfile.v"
   - "src/branch_comp.v"
-  - "src/pc_counter.v"
+  - "src/ProgramCounter.v"
+  - "src/BranchControl.v"
   # Add more source files here if you need
 
 

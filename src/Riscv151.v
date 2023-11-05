@@ -30,14 +30,19 @@ module Riscv151(
 
   wire pc_select;
   wire [31:0] alu_result;
+  
+  wire [31:0] next_pc;
+  wire [31:0] pc0;
+  wire [31:0] pc1;
+  wire [31:0] pc2;
+  wire [31:0] pc3;
 
-  pc_counter pc_counter(
+  ProgramCounter pc(
     rst, clk,
     pc_select,
     alu_result,
-    pc0
+    pc0, next_pc
   );
-  wire [31:0] pc0, pc1, pc2, pc3;
   REGISTER_R_CE#(.N(32)) pc_reg_1(
     .clk(clk), .rst(reset),
     .ce(!stall),

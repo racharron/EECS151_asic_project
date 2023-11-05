@@ -20,6 +20,7 @@ simOptions: &SIM_OPTIONS
 simVerilogSrc: &SIM_VERILOG_SRC
   - "src/ALU.v"
   - "src/ALUdec.v"
+  - "src/EECS151.v"
   - "src/Riscv151.v"
   - "src/Memory151.v"
   - "src/ExtMemModel.v"
@@ -33,7 +34,8 @@ simVerilogSrc: &SIM_VERILOG_SRC
   - "src/Decoder.v"
   - "src/regfile.v"
   - "src/branch_comp.v"
-  - "src/pc_counter.v"
+  - "src/ProgramCounter.v"
+  - "src/BranchControl.v"
   # Add more files here if you need
 
 #tb_name: &TB_NAME "ALUTestbench"
