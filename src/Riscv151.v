@@ -28,10 +28,34 @@ module Riscv151(
 
   wire add_rshift_type = funct7[5];
 
-  wire pc_sel;
-  wire [31:0] next_pc;
+  wire pc_select;
+  wire [31:0] alu_result;
 
-  reg [31:0] pc, pc1, pc2, pc3;
+  pc_counter pc_counter(
+    rst, clk,
+    pc_select,
+    alu_result,
+    pc0
+  );
+  wire [31:0] pc0, pc1, pc2, pc3;
+  REGISTER_R_CE#(.N(32)) pc_reg_1(
+    .clk(clk), .rst(reset),
+    .ce(!stall),
+    .q(pc1),
+    .d(pc0)
+  );
+  REGISTER_R_CE#(.N(32)) pc_reg_2(
+    .clk(clk), .rst(reset),
+    .ce(!stall),
+    .q(pc2),
+    .d(pc1)
+  );
+  REGISTER_R_CE#(.N(32)) pc_reg_3(
+    .clk(clk), .rst(reset),
+    .ce(!stall),
+    .q(pc3),
+    .d(pc2)
+  );
 
   assign icache_addr = next_pc;
 
@@ -44,12 +68,5 @@ module Riscv151(
     imm,
     csr_instr, csr_imm_instr
   );
-
-  always @(posedge clk) begin
-    pc <= next_pc;
-    pc1 <= pc;
-    pc2 <= pc1;
-    pc3 <= pc2;
-  end
 
 endmodule
