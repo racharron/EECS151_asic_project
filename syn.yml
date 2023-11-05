@@ -10,6 +10,9 @@ verilogSrc: &VERILOG_SRC
   - "src/riscv_arbiter.v"
   - "src/riscv_top.v"
   - "src/Decoder.v"
+  - "src/regfile.v"
+  - "src/branch_comp.v"
+  - "src/pc_counter.v"
   # Add more source files here if you need
 
 
