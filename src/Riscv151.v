@@ -26,6 +26,8 @@ module Riscv151(
   wire csr_instr;
   wire csr_imm_instr;
 
+  wire add_rshift_type = funct7[5];
+
   Decoder decoder(
     icache_dout,
     opcode,
