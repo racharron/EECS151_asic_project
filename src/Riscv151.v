@@ -18,6 +18,22 @@ module Riscv151(
 
 );
 
-  // Implement your core here, then delete this comment
+  wire [6:0] opcode;
+  wire [2:0] funct3;
+  wire [4:0] rd, rs1, rs2;
+  wire [6:0] funct7;
+  wire [31:0] imm;
+  wire csr_instr;
+  wire csr_imm_instr;
+
+  Decoder decoder(
+    icache_dout,
+    opcode,
+    funct3,
+    rd, rs1, rs2,
+    funct7,
+    imm,
+    csr_instr, csr_imm_instr
+  );
 
 endmodule
