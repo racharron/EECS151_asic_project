@@ -30,31 +30,44 @@ module Riscv151(
 
   wire pc_select;
   wire [31:0] alu_result;
-  
+
+  /// Fed into IMEM.
   wire [31:0] next_pc;
+  /// This connects the PC register to the decode-read stage PC buffer.
+  /// It allows delaying PC enough for the instruction to catch up to it.
   wire [31:0] pc0;
+  /// The value of PC in the decode-read stage.
   wire [31:0] pc1;
+  /// The value of PC in the execute stage.
   wire [31:0] pc2;
+  /// The value of PC in the writeback stage.
   wire [31:0] pc3;
 
+  /// This holds the PC value used for getting the next instruction.  
+  /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
     rst, clk,
     pc_select,
     alu_result,
     pc0, next_pc
   );
+  /// The output of this is the value of PC in the decode-read stage.
+  /// Since IMEM is synchronous, we have to wait a clock cycle to get
+  /// the instruction, which is why this is seperate from pc.
   REGISTER_R_CE#(.N(32)) pc_reg_1(
     .clk(clk), .rst(reset),
     .ce(!stall),
     .q(pc1),
     .d(pc0)
   );
+  /// The outut of this is the vale of PC in the execute stage.
   REGISTER_R_CE#(.N(32)) pc_reg_2(
     .clk(clk), .rst(reset),
     .ce(!stall),
     .q(pc2),
     .d(pc1)
   );
+  /// The output of this is the value of PC in the writeback stage.
   REGISTER_R_CE#(.N(32)) pc_reg_3(
     .clk(clk), .rst(reset),
     .ce(!stall),
