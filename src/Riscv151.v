@@ -28,6 +28,13 @@ module Riscv151(
 
   wire add_rshift_type = funct7[5];
 
+  wire pc_sel;
+  wire [31:0] next_pc;
+
+  reg [31:0] pc, pc1, pc2, pc3;
+
+  assign icache_addr = next_pc;
+
   Decoder decoder(
     icache_dout,
     opcode,
@@ -37,5 +44,12 @@ module Riscv151(
     imm,
     csr_instr, csr_imm_instr
   );
+
+  always @(posedge clk) begin
+    pc <= next_pc;
+    pc1 <= pc;
+    pc2 <= pc1;
+    pc3 <= pc2;
+  end
 
 endmodule
