@@ -30,11 +30,12 @@ simVerilogSrc: &SIM_VERILOG_SRC
   - "src/ALUTestbench.v"
   - "src/ALUTestVectorTestbench.v"
   - "src/riscv_test_harness.v"
+  - "src/Decoder.v"
   # Add more files here if you need
 
 #tb_name: &TB_NAME "ALUTestbench"
-tb_name: &TB_NAME "ALUTestVectorTestbench"
-#tb_name: &TB_NAME "rocketTestHarness"
+#tb_name: &TB_NAME "ALUTestVectorTestbench"
+tb_name: &TB_NAME "rocketTestHarness"
 
 # RTL Simulation Variables
 sim.inputs:
