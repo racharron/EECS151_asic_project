@@ -31,8 +31,8 @@ module Decoder (
             (opcode == `OPC_JALR) 
             | (opcode == `OPC_LOAD) 
             | (opcode == `OPC_ARI_ITYPE)
-        ) ? {{20{immi[11]}}, immi}
-        : 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
+        ) ? {{20{immi[11]}}, immi} : csr_instr ?
+        {27'b0, rs1} : 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
     
     assign csr_instr = opcode == `OPC_CSR;
     assign csr_imm_instr = funct3 == 3'b101;
