@@ -1,3 +1,5 @@
+`include "Opcode.vh"
+
 module Decoder (
     input [31:0] instr,
     output [6:0] opcode,
@@ -16,7 +18,7 @@ module Decoder (
 
     assign {immui, rd, opcode} = instr;
     assign {immjal[20], immjal[10:1], immjal[11], immjal[19:12], rd, opcode} = instr;
-    assign {immi, rs1, f3, rd, opcode} = instr;
+    assign {immi, rs1, funct3, rd, opcode} = instr;
     assign {immbr[12], immbr[10:5], rs2, rs1, funct3, immbr[4:1], immbr[11], opcode} = instr;
     assign {imms[11:5], rs2, rs1, funct3, imms[4:0], opcode} = instr;
     assign {funct7, rs2, rs1, funct3, rd, opcode} = instr;
