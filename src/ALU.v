@@ -31,8 +31,9 @@ always @(*) begin
         `ALU_SRA: out_internal = $signed(A) >>> B[4:0];    
         `ALU_SRL: out_internal = A >> B[4:0];   
         `ALU_COPY_B: out_internal = B;
+        `ALU_COPY_A: out_internal = A;
         `ALU_XXX: out_internal = 32'b0;
-        default: out_internal = A + B;     
+        default: out_internal = 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;     
     endcase
 end
 assign Out = out_internal;
