@@ -9,7 +9,6 @@ module regfile (
     //x0 should always be zero
     assign rd1 = (ra1 == 0) ? 32'd0 : rd_1;
     assign rd2 = (ra2 == 0) ? 32'd0 : rd_2;
-    assign din = (wa == 0) ? 32'd0 : wd;
 
     REG_1W2R #(
         .DWIDTH(32),
@@ -19,7 +18,7 @@ module regfile (
         .clk(clk),
         .d0(din),
         .addr0(wa),
-        .we(we),
+        .we(we & |wa),
         .q1(rd_1),
         .addr1(ra1),
         .q2(rd_2), 
