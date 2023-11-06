@@ -6,7 +6,7 @@ module Decoder (
     output [2:0] funct3,
     output [4:0] rd, rs1, rs2,
     output [6:0] funct7,
-    output [31:0] imm,
+    output [31:0] imm
 );
 
     wire [31:12] immui;
@@ -26,7 +26,7 @@ module Decoder (
         : (opcode == `OPC_JAL) ? {{11{immjal[20]}}, immjal, 1'b0}
         : (opcode == `OPC_BRANCH) ? {{19{immbr[12]}}, immbr, 1'b0}
         : (opcode == `OPC_STORE) ? {{20{imms[11]}}, imms}
-        : ((opcode == `OPC_ARI_ITYPE) & ((funct3 == `FNC_SLL) | (func3 == `FNC_SRL_SRA))) ? {'bxxxxxxxxxxxxxxxxxxxxxxxxxxx, rs2}
+        : ((opcode == `OPC_ARI_ITYPE) & ((funct3 == `FNC_SLL) | (funct3 == `FNC_SRL_SRA))) ? {'bxxxxxxxxxxxxxxxxxxxxxxxxxxx, rs2}
         : (
             (opcode == `OPC_JALR) 
             | (opcode == `OPC_LOAD) 
