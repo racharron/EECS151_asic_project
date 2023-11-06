@@ -43,6 +43,15 @@ module Riscv151(
   /// The value of PC in the writeback stage.
   wire [31:0] pc3;
 
+  wire bubble;
+
+  /// The register file write enables for each stage of the pipeline.
+  wire reg_we_1, reg_we_2, reg_we_3;
+  /// The memory write enables for each stage of the pipeline.
+  wire mem_we_1, mem_we_2, mem_we_3;
+  /// The memory read request for each stage of the pipeline.
+  wire mem_rr_1, mem_rr_2, mem_rr_3;
+
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
@@ -77,14 +86,23 @@ module Riscv151(
 
   assign icache_addr = next_pc;
 
-  Decoder decoder(
-    icache_dout,
-    opcode,
-    funct3,
-    rd, rs1, rs2,
-    funct7,
-    imm,
-    csr_instr, csr_imm_instr
+  DecodeRead stage1(
+      .clk(clk), .stall(stall), .bubble(bubble),
+      .instr(icache_dout),
+      input we,
+      input [4:0] wa,
+      input [31:0] wd,
+
+      output [31:0] ra, rb,
+      output reg [3:0] alu_op,
+      output reg add_rshift_type,
+      output reg a_sel, b_sel,
+      output reg reg_we, mem_we, mem_re,
+      output reg [2:0] funct3,
+      output reg [4:0] rd, rs1, rs2_shamt,
+      output reg [31:0] imm,
+      output reg csr_instr, csr_imm_instr,
+      output reg exec
   );
 
 endmodule
