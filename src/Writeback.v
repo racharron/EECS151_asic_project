@@ -4,16 +4,16 @@ module Writeback (
   input [31:0] alu_result,
   input [31:0] dcache_output,
   input [2:0] funct3,
-  input is_branch,
-  input is_jump,
-  input is_load,
-  input is_store,
-  input csr_enable,
-  output reg [31:0] writeback,
-  output reg reg_write_enable
+  input reg_we, mem_we, mem_rr, csr_write, jump,
+
+  output [31:0] writeback, addr,
+  /// Tells the CPU to pause for at least one cycle, so that the memory has time to at least get the address.
+  /// In the no_cache_mem model, there is no stall signal to tell the CPU to wait a cycle.
+  output pause
 );
   
-  reg [31:0] unmasked_load;
+  
+  reg pause_bit;
   wire [31:0] masked_load;
 
   ld mask (
