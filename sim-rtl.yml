@@ -37,6 +37,7 @@ simVerilogSrc: &SIM_VERILOG_SRC
   - "src/ProgramCounter.v"
   - "src/BranchControl.v"
   - "src/DecodeRead.v"
+  - "src/Execute.v"
   # Add more files here if you need
 
 #tb_name: &TB_NAME "ALUTestbench"
