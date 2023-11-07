@@ -6,8 +6,7 @@ module Decoder (
     output [2:0] funct3,
     output [4:0] rd, rs1, rs2,
     output [6:0] funct7,
-    output [31:0] imm,
-    output csr_instr, csr_imm_instr
+    output [31:0] imm
 );
 
     wire [31:12] immui;
@@ -23,19 +22,18 @@ module Decoder (
     assign {imms[11:5], rs2, rs1, funct3, imms[4:0], opcode} = instr;
     assign {funct7, rs2, rs1, funct3, rd, opcode} = instr;
 
-    assign imm = ((opcode == `OPC_LUI) | opcode == `OPC_AUIPC) ? 
-        {immui, 12'b0} : (opcode == `OPC_JAL) ?
-        {{11{immjal[20]}}, immjal, 1'b0} : (opcode == `OPC_BRANCH) ?
-        {{19{immbr[12]}}, immbr, 1'b0} : (opcode == `OPC_STORE) ?
-        {{20{imms[11]}}, imms} : (
+    assign imm = ((opcode == `OPC_LUI) | opcode == `OPC_AUIPC) ? {immui, 12'b0}
+        : (opcode == `OPC_JAL) ? {{11{immjal[20]}}, immjal, 1'b0}
+        : (opcode == `OPC_BRANCH) ? {{19{immbr[12]}}, immbr, 1'b0}
+        : (opcode == `OPC_STORE) ? {{20{imms[11]}}, imms}
+        : ((opcode == `OPC_ARI_ITYPE) & ((funct3 == `FNC_SLL) | (funct3 == `FNC_SRL_SRA))) ? {'bxxxxxxxxxxxxxxxxxxxxxxxxxxx, rs2}
+        : (
             (opcode == `OPC_JALR) 
             | (opcode == `OPC_LOAD) 
             | (opcode == `OPC_ARI_ITYPE)
-        ) ? {{20{immi[11]}}, immi} : csr_instr ?
-        {27'b0, rs1} : 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
-    
-    assign csr_instr = opcode == `OPC_CSR;
-    assign csr_imm_instr = funct3 == 3'b101;
+        ) ? {{20{immi[11]}}, immi}
+        : (opcode == `OPC_CSR) ? {{27{1'b0}}, rs1}
+        : 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
 
     /*
     always @* begin
