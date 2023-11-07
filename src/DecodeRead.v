@@ -7,8 +7,7 @@ module DecodeRead (
 
     output [31:0] ra, rb,
     output reg [3:0] alu_op,
-    output reg add_rshift_type,
-    output reg jump, jump_conditional,
+    output reg is_jump, jump_conditional,
     output reg [2:0] funct3,
     output reg a_sel, b_sel,
     /// Register WE, Memory WE (for stores), Memory Read Request (for loads)
@@ -54,9 +53,8 @@ module DecodeRead (
             csr_write <= 1'b0;
         end else if (!stall) begin
             alu_op <= alu_op_wire;
-            add_rshift_type <= add_rshift_type;
-            jump <= (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_BRANCH);
-            branch <= opcode == `OPC_BRANCH;
+            is_jump <= (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_BRANCH);
+            jump_conditional <= opcode == `OPC_BRANCH;
             a_sel <= ((opcode == `OPC_JAL) | (opcode == `OPC_AUIPC) | (opcode ==`OPC_BRANCH)) ? 1'b0 
                 : ((opcode == `OPC_STORE) | (opcode == `OPC_LOAD) | (opcode == `OPC_ARI_RTYPE) 
                     | (opcode == `OPC_ARI_ITYPE) | (opcode == `OPC_CSR)) ? 1'b1

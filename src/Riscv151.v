@@ -21,12 +21,9 @@ module Riscv151(
   wire [6:0] opcode;
   wire [2:0] funct3;
   wire [4:0] rd, rs1, rs2;
-  wire [6:0] funct7;
   wire [31:0] imm;
   wire csr_instr;
   wire csr_imm_instr;
-
-  wire add_rshift_type = funct7[5];
 
   wire pc_select;
   wire [31:0] alu_result;
@@ -35,17 +32,17 @@ module Riscv151(
   wire [31:0] next_pc;
   /// This connects the PC register to the decode-read stage PC buffer.
   /// It allows delaying PC enough for the instruction to catch up to it.
-  wire [31:0] pc0;
+  wire [31:0] pc_0;
   /// The value of PC in the decode-read stage.
-  wire [31:0] pc1;
+  wire [31:0] pc_1;
   /// The value of PC in the execute stage.
-  wire [31:0] pc2;
+  wire [31:0] pc_2;
   /// The value of PC in the writeback stage.
-  wire [31:0] pc3;
+  wire [31:0] pc_3;
 
-  /// An interstage signal that indicates that the preceding stages
-  /// should become bubbles.
-  wire bubble;
+  /// Signals indicating if this instruction should cause a jump.
+  /// jump_3 is also the bubble signal.
+  wire jump_2, jump_3;
   
   /// The register file write enables for each stage of the pipeline.
   wire reg_we_1, reg_we_2, reg_we_3;
@@ -65,49 +62,62 @@ module Riscv151(
   wire [31:0] reg_A_1, reg_A_2, reg_B_1, reg_B_2;
 
   /// The generated immediates across the first two stages of the pipeline.
-  wire [31:0] imm_1, imm_2;
+  wire [31:0] imm_2;
 
   /// The value that is written to the register file
   wire [31:0] writeback;
 
   wire [3:0] alu_op_2;
-  wire add_rshift_type_2;
   wire a_sel_2, b_sel_2;
-  wire jump_2, jump_conditional_2;
-  wire [2:0] funct3_2;
+  wire is_jump_2, jump_conditional_2;
 
   wire csr_write_2, csr_write_3;
+
+  wire [31:0] alu_result_2, alu_result_3;
+  wire [31:0] store_data_2, store_data_3;
+
+  reg pause;
+  wire bubble;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
     reset, clk,
     pc_select,
-    alu_result,
-    pc0, next_pc
+    writeback,
+    pc_0, next_pc
   );
+
+  /// The special CSR register used to communicate with the testbench.
+  REGISTER_R_CE#(.N(32)) tohost(
+    .clk(clk), .rst(reset),
+    .ce(csr_write_3),
+    .q(csr),
+    .d(writeback)
+  );
+
   /// The output of this is the value of PC in the decode-read stage.
   /// Since IMEM is synchronous, we have to wait a clock cycle to get
   /// the instruction, which is why this is seperate from pc.
   REGISTER_R_CE#(.N(32)) pc_0_buffer(
     .clk(clk), .rst(reset),
     .ce(!stall),
-    .q(pc1),
-    .d(pc0)
+    .q(pc_1),
+    .d(pc_0)
   );
   /// The outut of this is the vale of PC in the execute stage.
   REGISTER_R_CE#(.N(32)) pc_1_buffer(
     .clk(clk), .rst(reset),
     .ce(!stall),
-    .q(pc2),
-    .d(pc1)
+    .q(pc_2),
+    .d(pc_1)
   );
   /// The output of this is the value of PC in the writeback stage.
   REGISTER_R_CE#(.N(32)) pc_2_buffer(
     .clk(clk), .rst(reset),
     .ce(!stall),
-    .q(pc3),
-    .d(pc2)
+    .q(pc_3),
+    .d(pc_2)
   );
 
   REGISTER_R_CE#(.N(32)) reg_A_buffer(
@@ -123,7 +133,37 @@ module Riscv151(
     .d(reg_B_1)
   );
 
+  REGISTER_R_CE#(.N(32)) result_buffer(
+    .clk(clk), .rst(reset),
+    .ce(!stall),
+    .q(alu_result_3),
+    .d(alu_result_2)
+  );
+
+  REGISTER_R_CE#(.N(32)) store_data_buffer(
+    .clk(clk), .rst(reset),
+    .ce(!stall),
+    .q(store_data_3),
+    .d(store_data_2)
+  );
+
+  REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
+    .clk(clk), .rst(reset | bubble),
+    .ce(!stall & !jump_3),
+    .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, jump_3}),
+    .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, jump_2})
+  );
+
+  REGISTER_R_CE#(.N(5)) rd_buffer_2_3(
+    .clk(clk), .rst(reset),
+    .ce(!stall),
+    .q(rd_3),
+    .d(rd_2)
+  );
+
   assign icache_addr = next_pc;
+
+  assign bubble = jump_3 | ~|pause;
 
   DecodeRead stage1(
       .clk(clk), .stall(stall), .bubble(bubble | reset),
@@ -134,15 +174,39 @@ module Riscv151(
 
       .ra(reg_A_1), .rb(reg_B_1),
       .alu_op(alu_op_2),
-      .add_rshift_type(add_rshift_type_2),
-      .jump(jump_2),
+      .is_jump(is_jump_2),
       .jump_conditional(jump_conditional_2),
-      .funct3(funct3_2),
+      .funct3(funct3),
       .a_sel(a_sel_2), .b_sel(b_sel_2),
       .reg_we(reg_we_2), .mem_we(mem_we_2), .mem_rr(mem_rr_2),
       .rd(rd_2), .rs1(rs1_2), .rs2_shamt(rs2_2),
       .imm(imm_2),
       .csr_write(csr_write_2)
   );
+
+  Execute stage2(
+    .clk(clk),
+
+    .pc(pc_2), .reg_A(reg_A_2), .reg_B(reg_B_2),
+    .imm(imm_2), .previous(writeback),
+
+    .alu_op(alu_op_2),
+    .is_jump(is_jump_2), .jump_conditional(jump_conditional_2),
+    .funct3(funct3),
+
+    .rs1(rs1_2), .rs2(rs2_2), .prev_rd(rd_3),
+
+    .prev_reg_we(reg_we_3),
+
+    .a_sel(a_sel_2), .b_sel(b_sel_2),
+
+    .jump(pc_select),
+    .result(alu_result_2), .store_data(store_data_2)
+  );
+
+  always @(posedge clk) begin
+    if (pause & !reset) pause = 1'b0;
+    else if (jump_3 | reset) pause = 1'b1;
+  end
 
 endmodule
