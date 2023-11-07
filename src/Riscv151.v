@@ -76,6 +76,9 @@ module Riscv151(
   wire [31:0] alu_result_2, alu_result_3;
   wire [31:0] store_data_2, store_data_3;
 
+  reg pause;
+  wire bubble;
+
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
@@ -84,6 +87,15 @@ module Riscv151(
     writeback,
     pc_0, next_pc
   );
+
+  /// The special CSR register used to communicate with the testbench.
+  REGISTER_R_CE#(.N(32)) tohost(
+    .clk(clk), .rst(reset),
+    .ce(csr_write_3),
+    .q(csr),
+    .d(writeback)
+  );
+
   /// The output of this is the value of PC in the decode-read stage.
   /// Since IMEM is synchronous, we have to wait a clock cycle to get
   /// the instruction, which is why this is seperate from pc.
@@ -136,8 +148,8 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
+    .clk(clk), .rst(reset | bubble),
+    .ce(!stall & !jump_3),
     .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, jump_3}),
     .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, jump_2})
   );
@@ -151,8 +163,10 @@ module Riscv151(
 
   assign icache_addr = next_pc;
 
+  assign bubble = jump_3 | ~|pause;
+
   DecodeRead stage1(
-      .clk(clk), .stall(stall), .bubble(jump_3 | reset),
+      .clk(clk), .stall(stall), .bubble(bubble | reset),
       .instr(icache_dout),
       .we(reg_we_3),
       .wa(rd_3),
@@ -189,5 +203,10 @@ module Riscv151(
     .jump(pc_select),
     .result(alu_result_2), .store_data(store_data_2)
   );
+
+  always @(posedge clk) begin
+    if (pause & !reset) pause = 1'b0;
+    else if (jump_3 | reset) pause = 1'b1;
+  end
 
 endmodule
