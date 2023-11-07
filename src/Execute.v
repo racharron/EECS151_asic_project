@@ -7,13 +7,13 @@ module Execute (
     input is_jump, jump_conditional,
     input funct3,
 
-    input [4:0] rs1, rs2_shamt, prev_rd,
+    input [4:0] rs1, rs2, prev_rd,
     input prev_reg_we,
 
     input a_sel, b_sel,
 
     output jump,
-    output [31:0] result
+    output [31:0] result, store_data
 );
 
     wire [31:0] A, B, forwarded_A, forwarded_B;
@@ -30,6 +30,8 @@ module Execute (
     assign forward_B = (rs2 == prev_rd) & prev_reg_we;
 
     assign jump = is_jump & (!jump_conditional | branch);
+
+    assign store_data = forward_B;
 
     ALU alu(A, B, alu_op, result);
 
