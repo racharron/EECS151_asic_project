@@ -1,5 +1,5 @@
 module Execute (
-    input clk, reset,
+    input clk,
 
     /// Previous is either the output of the ALU, or a load.
     input [31:0] pc, reg_A, reg_B, imm, previous,
