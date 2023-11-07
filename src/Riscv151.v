@@ -32,13 +32,13 @@ module Riscv151(
   wire [31:0] next_pc;
   /// This connects the PC register to the decode-read stage PC buffer.
   /// It allows delaying PC enough for the instruction to catch up to it.
-  wire [31:0] pc0;
+  wire [31:0] pc_0;
   /// The value of PC in the decode-read stage.
-  wire [31:0] pc1;
+  wire [31:0] pc_1;
   /// The value of PC in the execute stage.
-  wire [31:0] pc2;
+  wire [31:0] pc_2;
   /// The value of PC in the writeback stage.
-  wire [31:0] pc3;
+  wire [31:0] pc_3;
 
   /// Signals indicating if this instruction should cause a jump.
   /// jump_3 is also the bubble signal.
@@ -70,7 +70,6 @@ module Riscv151(
   wire [3:0] alu_op_2;
   wire a_sel_2, b_sel_2;
   wire is_jump_2, jump_conditional_2;
-  wire [2:0] funct3_2;
 
   wire csr_write_2, csr_write_3;
 
@@ -83,7 +82,7 @@ module Riscv151(
     reset, clk,
     pc_select,
     writeback,
-    pc0, next_pc
+    pc_0, next_pc
   );
   /// The output of this is the value of PC in the decode-read stage.
   /// Since IMEM is synchronous, we have to wait a clock cycle to get
@@ -91,22 +90,22 @@ module Riscv151(
   REGISTER_R_CE#(.N(32)) pc_0_buffer(
     .clk(clk), .rst(reset),
     .ce(!stall),
-    .q(pc1),
-    .d(pc0)
+    .q(pc_1),
+    .d(pc_0)
   );
   /// The outut of this is the vale of PC in the execute stage.
   REGISTER_R_CE#(.N(32)) pc_1_buffer(
     .clk(clk), .rst(reset),
     .ce(!stall),
-    .q(pc2),
-    .d(pc1)
+    .q(pc_2),
+    .d(pc_1)
   );
   /// The output of this is the value of PC in the writeback stage.
   REGISTER_R_CE#(.N(32)) pc_2_buffer(
     .clk(clk), .rst(reset),
     .ce(!stall),
-    .q(pc3),
-    .d(pc2)
+    .q(pc_3),
+    .d(pc_2)
   );
 
   REGISTER_R_CE#(.N(32)) reg_A_buffer(
@@ -163,7 +162,7 @@ module Riscv151(
       .alu_op(alu_op_2),
       .is_jump(is_jump_2),
       .jump_conditional(jump_conditional_2),
-      .funct3(funct3_2),
+      .funct3(funct3),
       .a_sel(a_sel_2), .b_sel(b_sel_2),
       .reg_we(reg_we_2), .mem_we(mem_we_2), .mem_rr(mem_rr_2),
       .rd(rd_2), .rs1(rs1_2), .rs2_shamt(rs2_2),
@@ -179,7 +178,7 @@ module Riscv151(
 
     .alu_op(alu_op_2),
     .is_jump(is_jump_2), .jump_conditional(jump_conditional_2),
-    .funct3(funct3_2),
+    .funct3(funct3),
 
     .rs1(rs1_2), .rs2(rs2_2), .prev_rd(rd_3),
 
@@ -187,7 +186,7 @@ module Riscv151(
 
     .a_sel(a_sel_2), .b_sel(b_sel_2),
 
-    .jump(pc_select)
+    .jump(pc_select),
     .result(alu_result_2), .store_data(store_data_2)
   );
 

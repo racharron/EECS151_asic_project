@@ -53,7 +53,6 @@ module DecodeRead (
             csr_write <= 1'b0;
         end else if (!stall) begin
             alu_op <= alu_op_wire;
-            add_rshift_type <= add_rshift_type;
             is_jump <= (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_BRANCH);
             jump_conditional <= opcode == `OPC_BRANCH;
             a_sel <= ((opcode == `OPC_JAL) | (opcode == `OPC_AUIPC) | (opcode ==`OPC_BRANCH)) ? 1'b0 

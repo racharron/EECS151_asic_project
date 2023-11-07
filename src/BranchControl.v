@@ -1,6 +1,6 @@
 module BranchControl (
     input [31:0] A, B,
-    input funct3,
+    input [2:0] funct3,
     output branch
 );
     wire less, unsign, inv, less_than, br_equal;

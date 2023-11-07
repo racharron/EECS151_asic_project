@@ -5,7 +5,7 @@ module Execute (
     input [31:0] pc, reg_A, reg_B, imm, previous,
     input [3:0] alu_op,
     input is_jump, jump_conditional,
-    input funct3,
+    input [2:0] funct3,
 
     input [4:0] rs1, rs2, prev_rd,
     input prev_reg_we,
