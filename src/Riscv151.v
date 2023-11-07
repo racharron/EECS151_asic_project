@@ -18,6 +18,7 @@ module Riscv151(
 
 );
 
+  wire [31:0] instruction;
   wire [6:0] opcode;
   wire [2:0] funct3;
   wire [4:0] rd, rs1, rs2;
@@ -167,7 +168,7 @@ module Riscv151(
 
   DecodeRead stage1(
       .clk(clk), .stall(stall), .bubble(bubble | reset),
-      .instr(icache_dout),
+      .instr(instruction),
       .we(reg_we_3),
       .wa(rd_3),
       .wd(writeback),
