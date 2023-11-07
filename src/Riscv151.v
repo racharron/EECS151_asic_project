@@ -70,13 +70,13 @@ module Riscv151(
   /// The value that is written to the register file
   wire [31:0] writeback;
 
-  wire [3:0] alu_op_1, alu_op_2;
-  wire add_rshift_type_1, add_rshift_type_2;
-  wire shift_imm_1, shift_imm_2;
-  wire a_sel_1, a_sel_2, b_sel_1, b_sel_2;
+  wire [3:0] alu_op_2;
+  wire add_rshift_type_2;
+  wire shift_imm_2;
+  wire a_sel_2, b_sel_2;
 
-  wire csr_write_1, csr_write_2, csr_write_3;
-  wire csr_imm_1, csr_imm_2, csr_imm_3;
+  wire csr_write_2, csr_write_3;
+  wire csr_imm_2, csr_imm_3;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
@@ -123,101 +123,24 @@ module Riscv151(
     .d(reg_B_1)
   );
 
-  REGISTER_R_CE#(.N(5)) alu_ctrl_buffer(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q({alu_op_2, add_rshift_type_2}),
-    .d({alu_op_1, add_rshift_type_1})
-  );
-
-  REGISTER_R_CE shift_imm_buffer(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(shift_imm_2),
-    .d(shift_imm_1)
-  );
-
-  REGISTER_R_CE a_sel_buffer(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(a_sel_2),
-    .d(a_sel_1)
-  );
-
-  REGISTER_R_CE b_sel_buffer(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(b_sel_2),
-    .d(b_sel_1)
-  );
-
-  REGISTER_R_CE reg_we_buffer_1(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(reg_we_2),
-    .d(reg_we_1)
-  );
-
-  REGISTER_R_CE mem_we_buffer_1(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(mem_we_2),
-    .d(mem_we_1)
-  );
-
-  REGISTER_R_CE mem_rr_buffer_1(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(mem_rr_2),
-    .d(mem_rr_1)
-  );
-  
-  REGISTER_R_CE#(.N(5)) rd_buffer_1(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(rd_2),
-    .d(rd_1)
-  );
-  
-  REGISTER_R_CE#(.N(5)) rs1_buffer_1(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(rs1_2),
-    .d(rs1_1)
-  );
-  
-  REGISTER_R_CE#(.N(5)) rs2_buffer_1(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(rs2_2),
-    .d(rs2_1)
-  );
-
-  REGISTER_R_CE#(.N(32)) imm_buffer(
-    .clk(clk), .rst(reset),
-    .ce(!stall),
-    .q(imm_2),
-    .d(imm_1)
-  );
-
   assign icache_addr = next_pc;
 
   DecodeRead stage1(
-      .clk(clk), .stall(stall), .bubble(bubble),
+      .clk(clk), .stall(stall), .bubble(bubble | reset),
       .instr(icache_dout),
       .we(reg_we_3),
       .wa(rd_3),
       .wd(writeback),
 
       .ra(reg_A_1), .rb(reg_B_1),
-      .alu_op(alu_op_1),
-      .add_rshift_type(add_rshift_type_1),
-      .shift_imm(shift_imm_1),
-      .a_sel(a_sel_1), .b_sel(b_sel_1),
-      .reg_we(reg_we_1), .mem_we(mem_we_1), .mem_rr(mem_rr_1),
-      .rd(rd_1), .rs1(rs1_1), .rs2_shamt(rs2_1),
-      .imm(imm_1),
-      .csr_write(csr_write_1), .csr_imm(csr_imm_1)
+      .alu_op(alu_op_2),
+      .add_rshift_type(add_rshift_type_2),
+      .shift_imm(shift_imm_2),
+      .a_sel(a_sel_2), .b_sel(b_sel_2),
+      .reg_we(reg_we_2), .mem_we(mem_we_2), .mem_rr(mem_rr_2),
+      .rd(rd_2), .rs1(rs1_2), .rs2_shamt(rs2_2),
+      .imm(imm_2),
+      .csr_write(csr_write_2), .csr_imm(csr_imm_2)
   );
 
 endmodule

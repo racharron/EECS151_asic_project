@@ -48,12 +48,12 @@ module DecodeRead (
     );
 
     always @(posedge clk) begin
-        if (stall | bubble) begin
+        if (bubble) begin
             reg_we <= 1'b0;
             mem_we <= 1'b0;
             mem_rr <= 1'b0;
             csr_write <= 1'b0;
-        end else begin
+        end else if (!stall) begin
             alu_op <= alu_op_wire;
             add_rshift_type <= add_rshift_type;
             shift_imm <= (opcode == `OPC_ARI_ITYPE) & ((funct3 == `FNC_SLL) | (funct3 == `FNC_SRL_SRA));
