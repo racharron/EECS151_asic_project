@@ -1,9 +1,9 @@
 `include "Opcode.vh"
 
-module load_mask (
+module ld (
   input [31:0] mem_address,
   input [31:0] mem_output,
-  input [31:0] instruction,
+  input [2:0] funct3,
   output [31:0] load_out
 );
   reg [31:0] out_internal;
@@ -11,9 +11,6 @@ module load_mask (
   //Spec: https://inst.eecs.berkeley.edu/~eecs151/fa23/static/asic/project/docs/pg3-ckpt2/#misaligned-addresses
   wire [1:0] offset;
   assign offset = mem_address[1:0];
-
-  wire [2:0] funct3;
-  assign funct3 = instruction[14:12];
 
   always @(*) begin
     case (funct3)

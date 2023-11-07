@@ -210,4 +210,21 @@ module Riscv151(
     else if (jump_3 | reset) pause = 1'b1;
   end
 
+  assign dcache_addr = alu_result_3[31:2];
+
+  Writeback stage3 (
+    .clk(clk),
+    .pc(pc_3),
+    .alu_result(alu_result_3),
+    .dcache_output(dcache_dout),
+    .funct3(funct3),
+    .is_branch(jump_conditional_2),
+    .is_jump(is_jump_2),
+    .is_store(mem_we_3),
+    .is_load(mem_rr_3),
+    .csr_enable(csr_write_3),
+    .writeback(writeback),
+    .reg_write_enable(reg_we_3)
+  );
+
 endmodule
