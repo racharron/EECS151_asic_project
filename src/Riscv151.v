@@ -21,12 +21,9 @@ module Riscv151(
   wire [6:0] opcode;
   wire [2:0] funct3;
   wire [4:0] rd, rs1, rs2;
-  wire [6:0] funct7;
   wire [31:0] imm;
   wire csr_instr;
   wire csr_imm_instr;
-
-  wire add_rshift_type = funct7[5];
 
   wire pc_select;
   wire [31:0] alu_result;
@@ -71,9 +68,8 @@ module Riscv151(
   wire [31:0] writeback;
 
   wire [3:0] alu_op_2;
-  wire add_rshift_type_2;
   wire a_sel_2, b_sel_2;
-  wire jump_2, jump_conditional_2;
+  wire is_jump_2, jump_conditional_2;
   wire [2:0] funct3_2;
 
   wire csr_write_2, csr_write_3;
@@ -134,8 +130,7 @@ module Riscv151(
 
       .ra(reg_A_1), .rb(reg_B_1),
       .alu_op(alu_op_2),
-      .add_rshift_type(add_rshift_type_2),
-      .jump(jump_2),
+      .is_jump(is_jump_2),
       .jump_conditional(jump_conditional_2),
       .funct3(funct3_2),
       .a_sel(a_sel_2), .b_sel(b_sel_2),
