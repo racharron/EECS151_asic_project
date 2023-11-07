@@ -72,11 +72,11 @@ module Riscv151(
 
   wire [3:0] alu_op_2;
   wire add_rshift_type_2;
-  wire shift_imm_2;
   wire a_sel_2, b_sel_2;
+  wire jump_2, jump_conditional_2;
+  wire [2:0] funct3_2;
 
   wire csr_write_2, csr_write_3;
-  wire csr_imm_2, csr_imm_3;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
@@ -135,12 +135,14 @@ module Riscv151(
       .ra(reg_A_1), .rb(reg_B_1),
       .alu_op(alu_op_2),
       .add_rshift_type(add_rshift_type_2),
-      .shift_imm(shift_imm_2),
+      .jump(jump_2),
+      .jump_conditional(jump_conditional_2),
+      .funct3(funct3_2),
       .a_sel(a_sel_2), .b_sel(b_sel_2),
       .reg_we(reg_we_2), .mem_we(mem_we_2), .mem_rr(mem_rr_2),
       .rd(rd_2), .rs1(rs1_2), .rs2_shamt(rs2_2),
       .imm(imm_2),
-      .csr_write(csr_write_2), .csr_imm(csr_imm_2)
+      .csr_write(csr_write_2)
   );
 
 endmodule

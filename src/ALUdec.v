@@ -52,7 +52,11 @@ always @(*) begin
         `FNC_AND: ALUop = `ALU_AND;
       endcase
     end
-    `OPC_CSR: ALUop = `ALU_COPY_A;
+    `OPC_CSR: case (funct3)
+      `FNC_RW: ALUop = `ALU_COPY_A;
+      `FNC_RWI: ALUop = `ALU_COPY_B;
+      default: ALUop = `ALU_XXX;
+    endcase;
     default: ALUop = `ALU_XXX;
   endcase
 end

@@ -31,7 +31,8 @@ module Decoder (
             (opcode == `OPC_JALR) 
             | (opcode == `OPC_LOAD) 
             | (opcode == `OPC_ARI_ITYPE)
-        ) ? {{20{immi[11]}}, immi} 
+        ) ? {{20{immi[11]}}, immi}
+        : (opcode == `OPC_CSR) ? {{27{1'b0}}, rs1}
         : 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
 
     /*
