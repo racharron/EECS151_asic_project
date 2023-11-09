@@ -6,7 +6,7 @@ module Writeback (
   input [2:0] funct3,
   input reg_we, mem_rr, jump,
 
-  output [31:0] writeback, addr
+  output [31:0] writeback, addr,
   /// Tells the CPU to pause for at least one cycle, so that the memory has time to at least get the address.
   /// In the no_cache_mem model, there is no stall signal to tell the CPU to wait a cycle.
   output initial_pause
