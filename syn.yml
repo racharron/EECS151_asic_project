@@ -17,6 +17,9 @@ verilogSrc: &VERILOG_SRC
   - "src/BranchControl.v"
   - "src/DecodeRead.v"
   - "src/Execute.v"
+  - "src/Writeback.w"
+  - "src/ld.v"
+  - "src/Store.v"
   # Add more source files here if you need
 
 
