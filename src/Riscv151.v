@@ -19,8 +19,7 @@ module Riscv151(
 );
 
   wire [31:0] instruction;
-  wire [6:0] opcode;
-  wire [2:0] funct3;
+  wire [2:0] funct3_2, funct3_3;
   wire [4:0] rd, rs1, rs2;
   wire [31:0] imm;
   wire csr_instr;
@@ -77,15 +76,18 @@ module Riscv151(
   wire [31:0] alu_result_2, alu_result_3;
   wire [31:0] store_data_2, store_data_3;
 
-  reg pause;
+  reg branch_delay;
   wire bubble;
+  /// Pause indicates that stage 3 is beginning a read, and everything should temporarily halt.
+  /// Internal stall is a synonym for stall | pause
+  wire pause, internal_stall;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
     reset, clk,
-    pc_select,
-    writeback,
+    jump_2,
+    alu_result_2,
     pc_0, next_pc
   );
 
@@ -102,82 +104,82 @@ module Riscv151(
   /// the instruction, which is why this is seperate from pc.
   REGISTER_R_CE#(.N(32)) pc_0_buffer(
     .clk(clk), .rst(reset),
-    .ce(!stall),
+    .ce(!internal_stall),
     .q(pc_1),
     .d(pc_0)
   );
   /// The outut of this is the vale of PC in the execute stage.
   REGISTER_R_CE#(.N(32)) pc_1_buffer(
     .clk(clk), .rst(reset),
-    .ce(!stall),
+    .ce(!internal_stall),
     .q(pc_2),
     .d(pc_1)
   );
   /// The output of this is the value of PC in the writeback stage.
   REGISTER_R_CE#(.N(32)) pc_2_buffer(
     .clk(clk), .rst(reset),
-    .ce(!stall),
+    .ce(!internal_stall),
     .q(pc_3),
     .d(pc_2)
   );
 
   REGISTER_R_CE#(.N(32)) reg_A_buffer(
     .clk(clk), .rst(reset),
-    .ce(!stall),
+    .ce(!internal_stall),
     .q(reg_A_2),
     .d(reg_A_1)
   );
   REGISTER_R_CE#(.N(32)) reg_B_buffer(
     .clk(clk), .rst(reset),
-    .ce(!stall),
+    .ce(!internal_stall),
     .q(reg_B_2),
     .d(reg_B_1)
   );
 
   REGISTER_R_CE#(.N(32)) result_buffer(
     .clk(clk), .rst(reset),
-    .ce(!stall),
+    .ce(!internal_stall),
     .q(alu_result_3),
     .d(alu_result_2)
   );
 
   REGISTER_R_CE#(.N(32)) store_data_buffer(
     .clk(clk), .rst(reset),
-    .ce(!stall),
+    .ce(!internal_stall),
     .q(store_data_3),
     .d(store_data_2)
   );
 
-  REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
+  REGISTER_R_CE#(.N(8)) flags_buffer_2_3(
     .clk(clk), .rst(reset | bubble),
-    .ce(!stall & !jump_3),
-    .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, jump_3}),
-    .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, jump_2})
+    .ce(!internal_stall & !jump_3),
+    .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, jump_3, funct3_3}),
+    .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, jump_2, funct3_2})
   );
 
   REGISTER_R_CE#(.N(5)) rd_buffer_2_3(
     .clk(clk), .rst(reset),
-    .ce(!stall),
+    .ce(!internal_stall),
     .q(rd_3),
     .d(rd_2)
   );
 
   assign icache_addr = next_pc;
 
-  assign bubble = jump_3 | ~|pause;
+  assign bubble = jump_3 | ~|branch_delay;
 
   DecodeRead stage1(
-      .clk(clk), .stall(stall), .bubble(bubble | reset),
+      .clk(clk), .stall(internal_stall), .bubble(bubble | reset),
       .instr(instruction),
       .we(reg_we_3),
       .wa(rd_3),
-      .wd(writeback),
+      .wd(alu_result_2),
 
       .ra(reg_A_1), .rb(reg_B_1),
       .alu_op(alu_op_2),
       .is_jump(is_jump_2),
       .jump_conditional(jump_conditional_2),
-      .funct3(funct3),
+      .funct3(funct3_2),
       .a_sel(a_sel_2), .b_sel(b_sel_2),
       .reg_we(reg_we_2), .mem_we(mem_we_2), .mem_rr(mem_rr_2),
       .rd(rd_2), .rs1(rs1_2), .rs2_shamt(rs2_2),
@@ -193,7 +195,7 @@ module Riscv151(
 
     .alu_op(alu_op_2),
     .is_jump(is_jump_2), .jump_conditional(jump_conditional_2),
-    .funct3(funct3),
+    .funct3(funct3_2),
 
     .rs1(rs1_2), .rs2(rs2_2), .prev_rd(rd_3),
 
@@ -201,30 +203,28 @@ module Riscv151(
 
     .a_sel(a_sel_2), .b_sel(b_sel_2),
 
-    .jump(pc_select),
+    .jump(jump_2),
     .result(alu_result_2), .store_data(store_data_2)
   );
 
   always @(posedge clk) begin
-    if (pause & !reset) pause = 1'b0;
-    else if (jump_3 | reset) pause = 1'b1;
+    if(reset) branch_delay = 1'b1;
+    else if (branch_delay) branch_delay = 1'b0;
+    else if (jump_3) branch_delay = 1'b1;
   end
 
   assign dcache_addr = alu_result_3[31:2];
 
   Writeback stage3 (
-    .clk(clk),
+    .clk(clk), .reset(reset), .stall(stall),
     .pc(pc_3),
     .alu_result(alu_result_3),
     .dcache_output(dcache_dout),
-    .funct3(funct3),
-    .is_branch(jump_conditional_2),
-    .is_jump(is_jump_2),
-    .is_store(mem_we_3),
-    .is_load(mem_rr_3),
-    .csr_enable(csr_write_3),
+    .funct3(funct3_3),
+    .reg_we(reg_we_3), .mem_rr(mem_rr_3), .jump(jump_3),
     .writeback(writeback),
-    .reg_write_enable(reg_we_3)
+    .addr(dcache_addr),
+    .initial_pause(pause)
   );
 
 endmodule
