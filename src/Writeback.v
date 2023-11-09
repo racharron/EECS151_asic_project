@@ -1,5 +1,5 @@
 module Writeback (
-  input clk, reset, stall, mem_ready,
+  input clk, reset, stall,
   input [31:0] pc,
   input [31:0] alu_result,
   input [31:0] dcache_output,
@@ -34,7 +34,7 @@ module Writeback (
 
   always @(posedge clk) begin
     if (reset) continue_load <= 1'b0;
-    else if (continue_load & mem_ready & !stall) continue_load <= 1'b0;
+    else if (continue_load & !stall) continue_load <= 1'b0;
     else if (mem_rr) continue_load <= 1'b1;
   end
 endmodule
