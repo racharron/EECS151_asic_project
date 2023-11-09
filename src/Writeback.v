@@ -6,7 +6,7 @@ module Writeback (
   input [2:0] funct3,
   input reg_we, mem_rr, jump,
 
-  output [31:0] writeback, addr,
+  output [31:0] writeback,
   /// Tells the CPU to pause for at least one cycle, so that the memory has time to at least get the address.
   /// In the no_cache_mem model, there is no stall signal to tell the CPU to wait a cycle.
   output initial_pause
@@ -26,7 +26,6 @@ module Writeback (
   
 
   assign initial_pause = mem_rr & !continue_load;
-  assign addr = alu_result;
   assign jalr = reg_we & jump;
   assign writeback = jalr ? pc + 32'd4
     : mem_rr ? masked_load

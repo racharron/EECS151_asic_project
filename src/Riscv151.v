@@ -82,6 +82,8 @@ module Riscv151(
   /// Internal stall is a synonym for stall | pause
   wire pause, internal_stall;
 
+  assign instruction = icache_dout;
+
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
@@ -223,7 +225,6 @@ module Riscv151(
     .funct3(funct3_3),
     .reg_we(reg_we_3), .mem_rr(mem_rr_3), .jump(jump_3),
     .writeback(writeback),
-    .addr(dcache_addr),
     .initial_pause(pause)
   );
 
