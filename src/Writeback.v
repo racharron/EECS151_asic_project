@@ -4,7 +4,7 @@ module Writeback (
   input [31:0] alu_result,
   input [31:0] dcache_output,
   input [2:0] funct3,
-  input reg_we, mem_we, mem_rr, jump,
+  input reg_we, mem_rr, jump,
 
   output [31:0] writeback, addr
   /// Tells the CPU to pause for at least one cycle, so that the memory has time to at least get the address.
