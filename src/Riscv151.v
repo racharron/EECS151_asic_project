@@ -45,7 +45,7 @@ module Riscv151(
   wire mem_rr_2, mem_rr_3;
   
   /// The rd index for each stage of the pipeline.
-  wire [4:0] rd_1, rd_2, rd_3;
+  wire [4:0] rd_2, rd_3;
   /// The rs1 index for each stage of the pipeline.
   wire [4:0] rs1_2;
   /// The rs2 index for each stage of the pipeline.
