@@ -66,7 +66,6 @@ module Riscv151(
   wire [31:0] alu_result_2, alu_result_3;
   wire [31:0] store_data_2, store_data_3;
 
-  reg branch_delay;
   wire bubble;
   /// Pause indicates that stage 3 is beginning a read, and everything should temporarily halt.
   /// Internal stall is a synonym for stall | pause
@@ -139,7 +138,7 @@ module Riscv151(
 
   assign icache_addr = next_pc;
 
-  assign bubble = jump_3 | branch_delay;
+  assign bubble = jump_3;
 
   DecodeRead stage1(
       .clk(clk), .stall(internal_stall), .bubble(bubble | reset),
@@ -179,12 +178,6 @@ module Riscv151(
     .jump(jump_2),
     .result(alu_result_2), .store_data(store_data_2)
   );
-
-  always @(posedge clk) begin
-    if(reset) branch_delay <= 1'b1;
-    else if (branch_delay) branch_delay <= 1'b0;
-    else if (jump_3) branch_delay <= 1'b1;
-  end
 
   assign dcache_addr = alu_result_3[31:2];
 
