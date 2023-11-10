@@ -83,6 +83,8 @@ module Riscv151(
   wire pause, internal_stall;
 
   assign instruction = icache_dout;
+  assign dcache_re = mem_rr_3;
+  assign icache_re = 1'b1;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
@@ -221,10 +223,12 @@ module Riscv151(
     .clk(clk), .reset(reset), .stall(stall),
     .pc(pc_3),
     .alu_result(alu_result_3),
+    .write_data(store_data_3),
     .dcache_output(dcache_dout),
     .funct3(funct3_3),
-    .reg_we(reg_we_3), .mem_rr(mem_rr_3), .jump(jump_3),
-    .writeback(writeback),
+    .reg_we(reg_we_3), .mem_we(mem_we_3), .mem_rr(mem_rr_3), .jump(jump_3),
+    .writeback(writeback), .memory_out(dcache_din),
+    .mem_bytes_we(dcache_we),
     .initial_pause(pause)
   );
 
