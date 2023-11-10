@@ -85,6 +85,7 @@ module Riscv151(
   assign instruction = icache_dout;
   assign dcache_re = mem_rr_3;
   assign icache_re = 1'b1;
+  assign internal_stall = stall | pause;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
