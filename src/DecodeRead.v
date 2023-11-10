@@ -5,7 +5,7 @@ module DecodeRead (
     input [4:0] wa,
     input [31:0] wd,
 
-    output [31:0] ra, rb,
+    output reg [31:0] ra, rb,
     output reg [3:0] alu_op,
     output reg is_jump, jump_conditional,
     output reg [2:0] funct3,
@@ -21,28 +21,29 @@ module DecodeRead (
     wire [6:0] opcode, funct7;
     wire [3:0] alu_op_wire;
     wire add_rshift_type_wire;
+    wire [2:0] funct3_wire;
     wire [4:0] rd_wire, rs1_wire, rs2_shamt_wire;
-    wire [31:0] imm_wire;
+    wire [31:0] imm_wire, ra_wire, rb_wire;
 
     assign add_rshift_type_wire = funct7[5];
 
     Decoder decoder(
         instr,
         opcode,
-        funct3,
+        funct3_wire,
         rd_wire, rs1_wire, rs2_shamt_wire,
         funct7,
         imm_wire
     );
 
-    ALUdec alu_dec(opcode, funct3, add_rshift_type_wire, alu_op_wire);
+    ALUdec alu_dec(opcode, funct3_wire, add_rshift_type_wire, alu_op_wire);
 
     regfile regfile (
         .clk(clk),
         .we(we),  //write enable
         .ra1(rs1_wire), .ra2(rs2_shamt_wire), .wa(rd), // address A, address B, and write address
         .wd(wd), //write data
-        .rd1(ra), .rd2(rb) // A, B
+        .rd1(ra_wire), .rd2(rb_wire) // A, B
     );
 
     always @(posedge clk) begin
@@ -54,6 +55,7 @@ module DecodeRead (
             is_jump <= 1'b0;
         end else if (!stall) begin
             alu_op <= alu_op_wire;
+            funct3 <= funct3_wire;
             is_jump <= (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_BRANCH);
             jump_conditional <= opcode == `OPC_BRANCH;
             a_sel <= ((opcode == `OPC_JAL) | (opcode == `OPC_AUIPC) | (opcode ==`OPC_BRANCH)) ? 1'b0 
@@ -74,6 +76,8 @@ module DecodeRead (
             rs1 <= rs1_wire;
             rs2_shamt <= rs2_shamt_wire;
             imm <= imm_wire;
+            ra <= ra_wire;
+            rb <= rb_wire;
         end
     end
     
