@@ -11,7 +11,7 @@ module ProgramCounter (
 
 	REGISTER_R #(
 		.N(32),
-		.INIT(`PC_RESET)
+		.INIT(`PC_RESET - 32'd4)
 	) pc_register (
 		.q(current_pc),
 		.d(next_pc),

@@ -22,11 +22,6 @@ module Riscv151(
   wire [2:0] funct3_2, funct3_3;
   wire [4:0] rd, rs1, rs2;
   wire [31:0] imm;
-  wire csr_instr;
-  wire csr_imm_instr;
-
-  wire pc_select;
-  wire [31:0] alu_result;
 
   /// Fed into IMEM.
   wire [31:0] next_pc;
@@ -157,7 +152,7 @@ module Riscv151(
 
   REGISTER_R_CE#(.N(8)) flags_buffer_2_3(
     .clk(clk), .rst(reset | bubble),
-    .ce(!internal_stall & !jump_3),
+    .ce(!internal_stall),
     .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, jump_3, funct3_3}),
     .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, jump_2, funct3_2})
   );
@@ -171,7 +166,7 @@ module Riscv151(
 
   assign icache_addr = next_pc;
 
-  assign bubble = jump_3 | ~|branch_delay;
+  assign bubble = jump_3 | branch_delay;
 
   DecodeRead stage1(
       .clk(clk), .stall(internal_stall), .bubble(bubble | reset),
@@ -213,9 +208,9 @@ module Riscv151(
   );
 
   always @(posedge clk) begin
-    if(reset) branch_delay = 1'b1;
-    else if (branch_delay) branch_delay = 1'b0;
-    else if (jump_3) branch_delay = 1'b1;
+    if(reset) branch_delay <= 1'b1;
+    else if (branch_delay) branch_delay <= 1'b0;
+    else if (jump_3) branch_delay <= 1'b1;
   end
 
   assign dcache_addr = alu_result_3[31:2];

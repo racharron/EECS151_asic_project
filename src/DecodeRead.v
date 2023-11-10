@@ -51,6 +51,7 @@ module DecodeRead (
             mem_we <= 1'b0;
             mem_rr <= 1'b0;
             csr_write <= 1'b0;
+            is_jump <= 1'b0;
         end else if (!stall) begin
             alu_op <= alu_op_wire;
             is_jump <= (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_BRANCH);

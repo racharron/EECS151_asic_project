@@ -20,7 +20,7 @@ module Store (
                 write_out <= value;
             end
             default: begin
-                bwe <= 4'bxxxx;
+                bwe <= 4'b0000;
                 write_out <= 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
             end
         endcase
