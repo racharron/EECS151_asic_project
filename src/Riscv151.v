@@ -20,8 +20,6 @@ module Riscv151(
 
   wire [31:0] instruction;
   wire [2:0] funct3_2, funct3_3;
-  wire [4:0] rd, rs1, rs2;
-  wire [31:0] imm;
 
   /// Fed into IMEM.
   wire [31:0] next_pc;
@@ -40,21 +38,21 @@ module Riscv151(
   wire jump_2, jump_3;
   
   /// The register file write enables for each stage of the pipeline.
-  wire reg_we_1, reg_we_2, reg_we_3;
+  wire reg_we_2, reg_we_3;
   /// The memory write enables for each stage of the pipeline.
-  wire mem_we_1, mem_we_2, mem_we_3;
+  wire mem_we_2, mem_we_3;
   /// The memory read request for each stage of the pipeline.
-  wire mem_rr_1, mem_rr_2, mem_rr_3;
+  wire mem_rr_2, mem_rr_3;
   
   /// The rd index for each stage of the pipeline.
-  wire [4:0] rd_1, rd_2, rd_3;
+  wire [4:0] rd_2, rd_3;
   /// The rs1 index for each stage of the pipeline.
-  wire [4:0] rs1_1, rs1_2, rs1_3;
+  wire [4:0] rs1_2;
   /// The rs2 index for each stage of the pipeline.
-  wire [4:0] rs2_1, rs2_2;
+  wire [4:0] rs2_2;
 
   /// The A and B values from the registers for each stage of the pipeline.
-  wire [31:0] reg_A_1, reg_A_2, reg_B_1, reg_B_2;
+  wire [31:0] reg_A_2, reg_B_2;
 
   /// The generated immediates across the first two stages of the pipeline.
   wire [31:0] imm_2;
@@ -123,19 +121,6 @@ module Riscv151(
     .d(pc_2)
   );
 
-  REGISTER_R_CE#(.N(32)) reg_A_buffer(
-    .clk(clk), .rst(reset),
-    .ce(!internal_stall),
-    .q(reg_A_2),
-    .d(reg_A_1)
-  );
-  REGISTER_R_CE#(.N(32)) reg_B_buffer(
-    .clk(clk), .rst(reset),
-    .ce(!internal_stall),
-    .q(reg_B_2),
-    .d(reg_B_1)
-  );
-
   REGISTER_R_CE#(.N(32)) result_buffer(
     .clk(clk), .rst(reset),
     .ce(!internal_stall),
@@ -175,7 +160,7 @@ module Riscv151(
       .wa(rd_3),
       .wd(alu_result_2),
 
-      .ra(reg_A_1), .rb(reg_B_1),
+      .ra(reg_A_2), .rb(reg_B_2),
       .alu_op(alu_op_2),
       .is_jump(is_jump_2),
       .jump_conditional(jump_conditional_2),
