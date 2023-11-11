@@ -2,7 +2,7 @@ module DecodeRead (
     input clk, stall, bubble,
     input [31:0] instr,
 
-    output reg [3:0] alu_op,
+    output [3:0] alu_op,
     output reg is_jump, is_branch,
     output reg [2:0] funct3,
     output reg a_sel, b_sel,
@@ -16,7 +16,6 @@ module DecodeRead (
 );
 
     wire [6:0] opcode, funct7;
-    wire [3:0] alu_op_wire;
     wire add_rshift_type_wire;
     wire [2:0] funct3_wire;
     wire [4:0] rd_wire;
@@ -33,7 +32,7 @@ module DecodeRead (
         imm_wire
     );
 
-    ALUdec alu_dec(opcode, funct3_wire, add_rshift_type_wire, alu_op_wire);
+    ALUdec alu_dec(opcode, funct3_wire, add_rshift_type_wire, alu_op);
 
     always @(posedge clk) begin
         if (bubble) begin
@@ -43,7 +42,6 @@ module DecodeRead (
             csr_write <= 1'b0;
             is_jump <= 1'b0;
         end else if (!stall) begin
-            alu_op <= alu_op_wire;
             funct3 <= funct3_wire;
             is_jump <= (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_BRANCH);
             is_branch <= opcode == `OPC_BRANCH;
