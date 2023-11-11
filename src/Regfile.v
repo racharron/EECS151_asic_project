@@ -25,7 +25,7 @@ module Regfile (
     );
 
     always @(posedge clk) begin
-        rd1 <= (ra1 == 0) ? 32'd0 : (ra1 == wa) ? wd : rd_1;
-        rd2 <= (ra2 == 0) ? 32'd0 : (ra2 == wa) ? wd : rd_2;
+        rd1 <= (ra1 == 0) ? 32'd0 : (we & (ra1 == wa)) ? wd : rd_1;
+        rd2 <= (ra2 == 0) ? 32'd0 : (we & (ra2 == wa)) ? wd : rd_2;
     end
 endmodule
