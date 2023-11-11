@@ -59,5 +59,6 @@ always @(*) begin
     endcase
     default: ALUop = `ALU_XXX;
   endcase
+  $display("op: %b\tfunct: %b\tasrt: %b\talu: %d", opcode, funct, add_rshift_type, ALUop);
 end
 endmodule

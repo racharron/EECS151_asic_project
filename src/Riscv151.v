@@ -84,7 +84,7 @@ module Riscv151(
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
-    reset, clk,
+    clk, reset, stall,
     do_jump_2,
     alu_result_2,
     pc_1, next_pc
@@ -270,8 +270,9 @@ module Riscv151(
     .initial_pause(pause)
   );
 
-  always @(posedge clk) begin
-    prev_reset <= reset;
-  end
+  always @(posedge clk) prev_reset <= reset;
+  
+  always @(posedge clk) $display("tick!");
+  always @(negedge clk) $display("middle clk \tinstr = %h\n", icache_dout);
 
 endmodule
