@@ -32,7 +32,7 @@ module Riscv151(
 
   /// Signals indicating if this instruction should cause a jump.
   /// jump_3 is also the bubble signal.
-  wire jump_2, jump_3;
+  wire do_jump_2, do_jump_3;
   
   /// The register file write enables for each stage of the pipeline.
   wire reg_we_2, reg_we_3;
@@ -59,13 +59,15 @@ module Riscv151(
 
   wire [3:0] alu_op_2;
   wire a_sel_2, b_sel_2;
-  wire is_jump_2, jump_conditional_2;
+  wire is_jump_2, is_branch_2;
 
+  /// Indicates that we should write to the CSR register in writeback.
   wire csr_write_2, csr_write_3;
 
   wire [31:0] alu_result_2, alu_result_3;
   wire [31:0] store_data_2, store_data_3;
 
+  /// Indicates if we should turn the following instructions into nops.
   wire bubble;
   /// Pause indicates that stage 3 is beginning a read, and everything should temporarily halt.
   /// Internal stall is a synonym for stall | pause
@@ -80,7 +82,7 @@ module Riscv151(
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
     reset, clk,
-    jump_2,
+    do_jump_2,
     alu_result_2,
     pc_1, next_pc
   );
@@ -125,8 +127,8 @@ module Riscv151(
   REGISTER_R_CE#(.N(8)) flags_buffer_2_3(
     .clk(clk), .rst(reset | bubble),
     .ce(!internal_stall),
-    .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, jump_3, funct3_3}),
-    .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, jump_2, funct3_2})
+    .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, do_jump_3, funct3_3}),
+    .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, do_jump_2, funct3_2})
   );
 
   REGISTER_R_CE#(.N(5)) rd_buffer_2_3(
@@ -138,7 +140,7 @@ module Riscv151(
 
   assign icache_addr = next_pc;
 
-  assign bubble = jump_3;
+  assign bubble = do_jump_3;
 
   DecodeRead stage1(
       .clk(clk), .stall(internal_stall), .bubble(bubble | reset),
@@ -150,7 +152,7 @@ module Riscv151(
       .ra(reg_A_2), .rb(reg_B_2),
       .alu_op(alu_op_2),
       .is_jump(is_jump_2),
-      .jump_conditional(jump_conditional_2),
+      .is_branch(is_branch_2),
       .funct3(funct3_2),
       .a_sel(a_sel_2), .b_sel(b_sel_2),
       .reg_we(reg_we_2), .mem_we(mem_we_2), .mem_rr(mem_rr_2),
@@ -166,7 +168,7 @@ module Riscv151(
     .imm(imm_2), .previous(writeback),
 
     .alu_op(alu_op_2),
-    .is_jump(is_jump_2), .jump_conditional(jump_conditional_2),
+    .is_jump(is_jump_2), .is_branch(is_branch_2),
     .funct3(funct3_2),
 
     .rs1(rs1_2), .rs2(rs2_2), .prev_rd(rd_3),
@@ -175,7 +177,7 @@ module Riscv151(
 
     .a_sel(a_sel_2), .b_sel(b_sel_2),
 
-    .jump(jump_2),
+    .do_jump(do_jump_2),
     .result(alu_result_2), .store_data(store_data_2)
   );
 
@@ -188,7 +190,7 @@ module Riscv151(
     .write_data(store_data_3),
     .dcache_output(dcache_dout),
     .funct3(funct3_3),
-    .reg_we(reg_we_3), .mem_we(mem_we_3), .mem_rr(mem_rr_3), .jump(jump_3),
+    .reg_we(reg_we_3), .mem_we(mem_we_3), .mem_rr(mem_rr_3), .do_jump(do_jump_3),
     .writeback(writeback), .memory_out(dcache_din),
     .mem_bytes_we(dcache_we),
     .initial_pause(pause)

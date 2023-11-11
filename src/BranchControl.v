@@ -1,11 +1,11 @@
 module BranchControl (
     input [31:0] A, B,
     input [2:0] funct3,
-    output branch
+    output condition_true
 );
     wire less, unsign, inv, less_than, br_equal;
     assign {less, unsign, inv} = funct3;
-    assign branch = inv ^ (less ? less_than : br_equal);
+    assign condition_true = inv ^ (less ? less_than : br_equal);
     branch_comp bc (
         .unsign(unsign),
         .A(A),

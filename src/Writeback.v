@@ -5,7 +5,7 @@ module Writeback (
   input [31:0] write_data,
   input [31:0] dcache_output,
   input [2:0] funct3,
-  input reg_we, mem_we, mem_rr, jump,
+  input reg_we, mem_we, mem_rr, do_jump,
 
   output [31:0] writeback, memory_out,
   output [3:0] mem_bytes_we,
@@ -36,7 +36,7 @@ module Writeback (
   
 
   assign initial_pause = mem_rr & !continue_load;
-  assign jalr = reg_we & jump;
+  assign jalr = reg_we & do_jump;
   assign writeback = jalr ? pc + 32'd4
     : mem_rr ? masked_load
     : alu_result;

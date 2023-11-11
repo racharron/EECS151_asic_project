@@ -2,6 +2,7 @@ module Store (
     input [31:0] addr, value,
     input [2:0] funct3,
     input we,
+    /// Byte write enables, all 0 indicates no write
     output reg [3:0] bwe,
     output reg [31:0] write_out
 );
