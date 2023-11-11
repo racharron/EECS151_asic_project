@@ -32,7 +32,7 @@ simVerilogSrc: &SIM_VERILOG_SRC
   - "src/ALUTestVectorTestbench.v"
   - "src/riscv_test_harness.v"
   - "src/Decoder.v"
-  - "src/regfile.v"
+  - "src/Regfile.v"
   - "src/branch_comp.v"
   - "src/ProgramCounter.v"
   - "src/BranchControl.v"

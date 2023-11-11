@@ -11,7 +11,7 @@ verilogSrc: &VERILOG_SRC
   - "src/riscv_arbiter.v"
   - "src/riscv_top.v"
   - "src/Decoder.v"
-  - "src/regfile.v"
+  - "src/Regfile.v"
   - "src/branch_comp.v"
   - "src/ProgramCounter.v"
   - "src/BranchControl.v"

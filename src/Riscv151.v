@@ -44,9 +44,9 @@ module Riscv151(
   /// The rd index for each stage of the pipeline.
   wire [4:0] rd_2, rd_3;
   /// The rs1 index for each stage of the pipeline.
-  wire [4:0] rs1_2;
+  wire [4:0] rs1_1, rs1_2;
   /// The rs2 index for each stage of the pipeline.
-  wire [4:0] rs2_2;
+  wire [4:0] rs2_1, rs2_2;
 
   /// The A and B values from the registers for each stage of the pipeline.
   wire [31:0] reg_A_2, reg_B_2;
@@ -87,6 +87,13 @@ module Riscv151(
     pc_1, next_pc
   );
 
+  Regfile regfile(
+    .clk(clk), .we(reg_we_3),
+    .ra1(rs1_1), .ra2(rs2_1), .wa(rd_3),
+    .wd(writeback),
+    .rd1(reg_A_2), .rd2(reg_B_2)
+  );
+
   /// The special CSR register used to communicate with the testbench.
   REGISTER_R_CE#(.N(32)) tohost(
     .clk(clk), .rst(reset),
@@ -108,6 +115,20 @@ module Riscv151(
     .ce(!internal_stall),
     .q(pc_3),
     .d(pc_2)
+  );
+
+  REGISTER_R_CE#(.N(5)) rs1_buffer_1_2(
+    .clk(clk), .rst(reset),
+    .ce(!internal_stall),
+    .q(rs1_2),
+    .d(rs1_1)
+  );
+
+  REGISTER_R_CE#(.N(5)) rs2_buffer_1_2(
+    .clk(clk), .rst(reset),
+    .ce(!internal_stall),
+    .q(rs2_2),
+    .d(rs2_1)
   );
 
   REGISTER_R_CE#(.N(32)) result_buffer(
@@ -145,18 +166,14 @@ module Riscv151(
   DecodeRead stage1(
       .clk(clk), .stall(internal_stall), .bubble(bubble | reset),
       .instr(instruction),
-      .we(reg_we_3),
-      .wa(rd_3),
-      .wd(alu_result_2),
 
-      .ra(reg_A_2), .rb(reg_B_2),
       .alu_op(alu_op_2),
       .is_jump(is_jump_2),
       .is_branch(is_branch_2),
       .funct3(funct3_2),
       .a_sel(a_sel_2), .b_sel(b_sel_2),
       .reg_we(reg_we_2), .mem_we(mem_we_2), .mem_rr(mem_rr_2),
-      .rd(rd_2), .rs1(rs1_2), .rs2_shamt(rs2_2),
+      .rd(rd_2), .rs1(rs1_1), .rs2(rs2_1),
       .imm(imm_2),
       .csr_write(csr_write_2)
   );

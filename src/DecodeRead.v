@@ -1,11 +1,7 @@
 module DecodeRead (
     input clk, stall, bubble,
     input [31:0] instr,
-    input we,
-    input [4:0] wa,
-    input [31:0] wd,
 
-    output reg [31:0] ra, rb,
     output reg [3:0] alu_op,
     output reg is_jump, is_branch,
     output reg [2:0] funct3,
@@ -13,7 +9,8 @@ module DecodeRead (
     /// Register WE, Memory WE (for stores), Memory Read Request (for loads)
     output reg reg_we, mem_we, mem_rr,
     /// The immediate shift around amount and rs2 are combined in the same bus.
-    output reg [4:0] rd, rs1, rs2_shamt,
+    output reg [4:0] rd,
+    output [4:0] rs1, rs2,
     output reg [31:0] imm,
     output reg csr_write
 );
@@ -22,8 +19,8 @@ module DecodeRead (
     wire [3:0] alu_op_wire;
     wire add_rshift_type_wire;
     wire [2:0] funct3_wire;
-    wire [4:0] rd_wire, rs1_wire, rs2_shamt_wire;
-    wire [31:0] imm_wire, ra_wire, rb_wire;
+    wire [4:0] rd_wire;
+    wire [31:0] imm_wire;
 
     assign add_rshift_type_wire = funct7[5];
 
@@ -31,20 +28,12 @@ module DecodeRead (
         instr,
         opcode,
         funct3_wire,
-        rd_wire, rs1_wire, rs2_shamt_wire,
+        rd_wire, rs1, rs2,
         funct7,
         imm_wire
     );
 
     ALUdec alu_dec(opcode, funct3_wire, add_rshift_type_wire, alu_op_wire);
-
-    regfile regfile (
-        .clk(clk),
-        .we(we),  //write enable
-        .ra1(rs1_wire), .ra2(rs2_shamt_wire), .wa(rd), // address A, address B, and write address
-        .wd(wd), //write data
-        .rd1(ra_wire), .rd2(rb_wire) // A, B
-    );
 
     always @(posedge clk) begin
         if (bubble) begin
@@ -73,11 +62,7 @@ module DecodeRead (
             mem_rr <= opcode == `OPC_LOAD;
             csr_write <= opcode == `OPC_CSR;
             rd <= rd_wire;
-            rs1 <= rs1_wire;
-            rs2_shamt <= rs2_shamt_wire;
             imm <= imm_wire;
-            ra <= ra_wire;
-            rb <= rb_wire;
         end
     end
     
