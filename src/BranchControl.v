@@ -3,14 +3,14 @@ module BranchControl (
     input [2:0] funct3,
     output condition_true
 );
-    wire less, unsign, inv, less_than, br_equal;
-    assign {less, unsign, inv} = funct3;
-    assign condition_true = inv ^ (less ? less_than : br_equal);
+    wire test_less, unsigned_comparison, inv, is_less_than, is_equal;
+    assign {test_less, unsigned_comparison, inv} = funct3;
+    assign condition_true = inv ^ (test_less ? is_less_than : is_equal);
     branch_comp bc (
-        .unsign(unsign),
+        .unsigned_comparison(unsigned_comparison),
         .A(A),
         .B(B),
-        .less_than(less_than),
-        .br_equal(br_equal)
+        .less_than(is_less_than),
+        .equal(is_equal)
     );
 endmodule
