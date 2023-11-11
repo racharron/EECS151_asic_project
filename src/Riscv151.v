@@ -18,6 +18,9 @@ module Riscv151(
 
 );
 
+  /// Adds a delay after reset to let everything propagate first
+  reg prev_reset;
+
   wire [2:0] funct3_1, funct3_2, funct3_3;
 
   /// Fed into IMEM.
@@ -76,7 +79,7 @@ module Riscv151(
 
   assign dcache_re = mem_rr_3;
   assign icache_re = 1'b1;
-  assign internal_stall = stall | pause;
+  assign internal_stall = stall | pause | prev_reset;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
@@ -160,7 +163,7 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(2)) jump_flag_buffer_1_2(
-    .clk(clk), .rst(1'b0),
+    .clk(clk), .rst(reset | bubble),
     .ce(!internal_stall),
     .q({is_jump_2, is_branch_2}),
     .d({is_jump_1, is_branch_1})
@@ -235,8 +238,6 @@ module Riscv151(
   );
 
   Execute stage2(
-    .clk(clk),
-
     .pc(pc_2), .reg_A(reg_A_2), .reg_B(reg_B_2),
     .imm(imm_2), .previous(writeback),
 
@@ -268,5 +269,9 @@ module Riscv151(
     .mem_bytes_we(dcache_we),
     .initial_pause(pause)
   );
+
+  always @(posedge clk) begin
+    prev_reset <= reset;
+  end
 
 endmodule
