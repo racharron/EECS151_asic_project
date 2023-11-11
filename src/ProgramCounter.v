@@ -7,7 +7,7 @@ module ProgramCounter (
 	output [31:0] next_pc
 );
 	wire [31:0] current_pc;
-	assign next_pc = pc_select ? alu_result : pc + 32'd4;
+	assign next_pc = (pc_select & !rst) ? alu_result : pc + 32'd4;
 
 	REGISTER_R #(
 		.N(32),
