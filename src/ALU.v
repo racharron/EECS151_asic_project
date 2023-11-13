@@ -32,7 +32,7 @@ always @(*) begin
         `ALU_SRL: out_internal = A >> B[4:0];   
         `ALU_COPY_B: out_internal = B;
         `ALU_XXX: out_internal = 32'b0;
-        default: out_internal = A + B;     
+        default: out_internal = 32'b0;     
     endcase
 end
 assign Out = out_internal;

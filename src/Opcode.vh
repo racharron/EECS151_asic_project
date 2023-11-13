@@ -77,6 +77,7 @@
 `define FNC2_SRL        1'b0
 `define FNC2_SRA        1'b1
 
-
+`define OPC_BRANCH_5 5'b11000
+`define OPC_STORE_5 5'b01000
 
 `endif //OPCODE

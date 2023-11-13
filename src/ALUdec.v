@@ -26,15 +26,15 @@ always @(*) begin
     `OPC_STORE: ALUop = `ALU_ADD;
     `OPC_JALR: ALUop = `ALU_ADD;
     `OPC_JAL: ALUop = `ALU_ADD;
-    // `OPC_CSR: begin
-    // end
     `OPC_ARI_RTYPE, `OPC_ARI_ITYPE: begin
       case(funct)
         `FNC_ADD_SUB: begin
-          if (add_rshift_type == `FNC2_ADD) begin
+          if (opcode == `OPC_ARI_RTYPE && add_rshift_type == `FNC2_ADD) begin
             ALUop = `ALU_ADD;
-          end else if (add_rshift_type == `FNC2_SUB) begin
+          end else if (opcode == `OPC_ARI_RTYPE && add_rshift_type == `FNC2_SUB) begin
             ALUop = `ALU_SUB;
+          end else begin
+            ALUop = `ALU_ADD;
           end
         end
         `FNC_SLL: ALUop = `ALU_SLL;
