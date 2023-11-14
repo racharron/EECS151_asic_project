@@ -161,7 +161,7 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(4)) flags_buffer_1_2(
-    .clk(clk), .rst(reset | bubble),
+    .clk(clk), .rst(reset | (bubble & !internal_stall)),
     .ce(!internal_stall),
     .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2}),
     .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1})
@@ -175,7 +175,7 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(2)) jump_flag_buffer_1_2(
-    .clk(clk), .rst(reset | bubble),
+    .clk(clk), .rst(reset | (bubble & !internal_stall)),
     .ce(!internal_stall),
     .q({is_jump_2, is_branch_2}),
     .d({is_jump_1, is_branch_1})
