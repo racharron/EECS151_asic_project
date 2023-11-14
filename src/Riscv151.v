@@ -1,5 +1,5 @@
 `include "const.vh"
-
+`include "Opcode.vh"
 module Riscv151(
     input clk,
     input reset,
@@ -257,4 +257,32 @@ module Riscv151(
     .d(csr_result),
     .q(csr)
   );
+
+  property resetted;
+    @(posedge clk) disable iff (!reset) reset |-> (fd_pc_out == `PC_RESET);
+  endproperty
+
+  property zero;
+    @(posedge clk) disable iff (reset) rf.REG_1W2R.mem[0] == 0;
+  endproperty
+
+  property store;
+    @(negedge clk) disable iff (reset || x_instruction_in[6:0] != `OPC_STORE) 
+        (x_instruction_in[14:12] inside {`FNC_SB, `FNC_SH, `FNC_SW} &&
+        (x_instruction_in[14:12] == `FNC_SB && (dcache_we == 4'b0001 || dcache_we == 4'b0010 || dcache_we == 4'b0100 || dcache_we == 4'b1000)) ||
+        (x_instruction_in[14:12] == `FNC_SH && (dcache_we == 4'b0011 || dcache_we == 4'b1100)) ||
+        (x_instruction_in[14:12] == `FNC_SW && (dcache_we == 4'b1111)));
+  endproperty
+
+  property load;
+    @(negedge clk) disable iff (reset || (m_inst[6:0] != `OPC_LOAD || m_inst[14:12] == `FNC_LW)) 
+        (m_inst[14:12] inside {`FNC_LB, `FNC_LH, `FNC_LBU, `FNC_LHU}) && 
+        (((m_inst[14:12] == `FNC_LB || m_inst[14:12] == `FNC_LBU) && (writeback_value[31:8] == 24'b0 || writeback_value[31:8] == 24'hFFFFFF)) ||
+        ((m_inst[14:12] == `FNC_LH || m_inst[14:12] == `FNC_LHU) && (writeback_value[31:16] == 16'b0 || writeback_value[31:16] == 16'hFFFF)));
+  endproperty
+
+  assert property(zero);
+  assert property(load);
+  assert property(store);
+  assert property(resetted);
 endmodule
