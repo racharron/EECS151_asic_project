@@ -30,4 +30,11 @@ module Regfile (
             rd2 <= (ra2 == 0) ? 32'd0 : (we & (ra2 == wa)) ? wd : rd_2;
         end
     end
+    
+    x0_always_0:
+    assert property (
+        /// We ignore if time = 0, because it hasn't been set yet.
+        @(posedge |REG_1W2R.mem[0]) $time == 0
+    ) 
+    else   $error("x0 = %h @ $d", $sampled(REG_1W2R.mem[0]), $time);
 endmodule
