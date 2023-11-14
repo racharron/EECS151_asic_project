@@ -9,12 +9,12 @@ module Store (
     always @(*) begin
         case (funct3)
             `FNC_SB: begin
-                bwe <= {4{we}} & 4'b0001 << addr[1:0];
-                write_out <= value << {addr[1:0], 3'b000};
+                bwe <= {3'b000, we} << addr[1:0];
+                write_out <= (32'h000000FF & value) << {addr[1:0], 3'b000};
             end
             `FNC_SH: begin
                 bwe <= {4{we}} & 4'b0011 << {addr[1], 1'b0};
-                write_out <= value << {addr[1], 4'b0000};
+                write_out <= (32'h0000FFFF & value) << {addr[1], 4'b0000};
             end
             `FNC_SW: begin
                 bwe <= {4{we}} & 4'b1111;

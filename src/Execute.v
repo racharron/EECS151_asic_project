@@ -24,12 +24,12 @@ module Execute (
     assign forwarded_A = forward_A ? previous : reg_A;
     assign forwarded_B = forward_B ? previous : reg_B;
 
-    assign forward_A = (rs1 == prev_rd) & prev_reg_we;
-    assign forward_B = (rs2 == prev_rd) & prev_reg_we;
+    assign forward_A = rs1 == prev_rd && prev_rd != 5'd0 && prev_reg_we;
+    assign forward_B = rs2 == prev_rd && prev_rd != 5'd0 && prev_reg_we;
 
     assign do_jump = is_jump & (!is_branch | condition_true);
 
-    assign store_data = forward_B;
+    assign store_data = forwarded_B;
 
     ALU alu(A, B, alu_op, result);
 

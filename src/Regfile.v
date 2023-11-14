@@ -1,5 +1,5 @@
 module Regfile (
-    input clk,
+    input clk, stall,
     input we,  //write enable
     input [4:0] ra1, ra2, wa, // address A, address B, and write address
     input [31:0] wd, //write data
@@ -25,7 +25,9 @@ module Regfile (
     );
 
     always @(posedge clk) begin
-        rd1 <= (ra1 == 0) ? 32'd0 : (we & (ra1 == wa)) ? wd : rd_1;
-        rd2 <= (ra2 == 0) ? 32'd0 : (we & (ra2 == wa)) ? wd : rd_2;
+        if (!stall) begin
+            rd1 <= (ra1 == 0) ? 32'd0 : (we & (ra1 == wa)) ? wd : rd_1;
+            rd2 <= (ra2 == 0) ? 32'd0 : (we & (ra2 == wa)) ? wd : rd_2;
+        end
     end
 endmodule

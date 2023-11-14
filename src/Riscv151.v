@@ -32,6 +32,9 @@ module Riscv151(
   /// The value of PC in the writeback stage.
   wire [31:0] pc_3;
 
+  /// The instruction that stage 1 can see.  Outputted by the stall handler.
+  wire [31:0] instruction;
+
   /// Signals indicating if this instruction should cause a jump.
   /// jump_3 is also the bubble signal.
   wire do_jump_2, do_jump_3;
@@ -81,17 +84,22 @@ module Riscv151(
   assign icache_re = 1'b1;
   assign internal_stall = stall | pause | prev_reset;
 
+  assign icache_addr = next_pc;
+
+  assign bubble = do_jump_2;
+
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
-    clk, reset, stall,
+    clk, reset, internal_stall,
     do_jump_2,
     alu_result_2,
     pc_1, next_pc
   );
 
   Regfile regfile(
-    .clk(clk), .we(reg_we_3),
+    .clk(clk), .stall(internal_stall),
+    .we(reg_we_3),
     .ra1(rs1_1), .ra2(rs2_1), .wa(rd_3),
     .wd(writeback),
     .rd1(reg_A_2), .rd2(reg_B_2)
@@ -148,18 +156,18 @@ module Riscv151(
     .d(store_data_2)
   );
 
-  REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
-    .clk(clk), .rst(reset | bubble),
-    .ce(!internal_stall),
-    .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, do_jump_3}),
-    .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, do_jump_2})
-  );
-
   REGISTER_R_CE#(.N(4)) flags_buffer_1_2(
     .clk(clk), .rst(reset | bubble),
     .ce(!internal_stall),
     .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2}),
     .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1})
+  );
+
+  REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
+    .clk(clk), .rst(reset),
+    .ce(!internal_stall),
+    .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, do_jump_3}),
+    .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, do_jump_2})
   );
 
   REGISTER_R_CE#(.N(2)) jump_flag_buffer_1_2(
@@ -218,13 +226,11 @@ module Riscv151(
     .d(rd_2)
   );
 
-  assign icache_addr = next_pc;
-
-  assign bubble = do_jump_3;
+  StallHandler stall_handler(clk, internal_stall, icache_dout, instruction);
 
   DecodeRead stage1(
       .stall(internal_stall), .bubble(bubble | reset),
-      .instr(icache_dout),
+      .instr(instruction),
 
       .alu_op(alu_op_1),
       .is_jump(is_jump_1),
@@ -255,10 +261,10 @@ module Riscv151(
     .result(alu_result_2), .store_data(store_data_2)
   );
 
-  assign dcache_addr = alu_result_3[31:2];
+  assign dcache_addr = {alu_result_3[31:2], 2'b00};
 
   Writeback stage3 (
-    .clk(clk), .reset(reset), .stall(stall),
+    .clk(clk), .reset(reset), .stall(internal_stall),
     .pc(pc_3),
     .alu_result(alu_result_3),
     .write_data(store_data_3),
@@ -271,8 +277,5 @@ module Riscv151(
   );
 
   always @(posedge clk) prev_reset <= reset;
-  
-  always @(posedge clk) $display("tick!");
-  always @(negedge clk) $display("middle clk \tinstr = %h\n", icache_dout);
 
 endmodule

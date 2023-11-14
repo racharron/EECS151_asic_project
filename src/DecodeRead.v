@@ -33,14 +33,14 @@ module DecodeRead (
 
     assign is_jump = (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_BRANCH);
     assign is_branch = opcode == `OPC_BRANCH;
-    assign a_sel = ((opcode == `OPC_JAL) | (opcode == `OPC_AUIPC) | (opcode ==`OPC_BRANCH)) ? 1'b0 
-        : ((opcode == `OPC_STORE) | (opcode == `OPC_LOAD) | (opcode == `OPC_ARI_RTYPE) 
-            | (opcode == `OPC_ARI_ITYPE) | (opcode == `OPC_CSR)) ? 1'b1
+    assign a_sel = (opcode == `OPC_JAL || opcode == `OPC_AUIPC || opcode ==`OPC_BRANCH) ? 1'b0 
+        : (opcode == `OPC_STORE || opcode == `OPC_LOAD || opcode == `OPC_ARI_RTYPE 
+            || opcode == `OPC_ARI_ITYPE || opcode == `OPC_CSR || opcode == `OPC_JALR) ? 1'b1
         : 1'bx;
-    assign b_sel = ((opcode == `OPC_STORE) | (opcode == `OPC_ARI_RTYPE)) ? 1'b0
-        : ((opcode == `OPC_LUI) | (opcode == `OPC_AUIPC) | (opcode == `OPC_JAL) | (opcode == `OPC_CSR)
-            | (opcode == `OPC_JALR) | (opcode == `OPC_BRANCH) | (opcode == `OPC_LOAD)
-            | (opcode == `OPC_STORE) | (opcode == `OPC_ARI_ITYPE)) ? 1'b1
+    assign b_sel = (opcode == `OPC_ARI_RTYPE) ? 1'b0
+        : (opcode == `OPC_LUI || opcode == `OPC_AUIPC || opcode == `OPC_JAL || opcode == `OPC_CSR
+            || opcode == `OPC_BRANCH || opcode == `OPC_LOAD || opcode == `OPC_JALR
+            || opcode == `OPC_STORE || opcode == `OPC_ARI_ITYPE) ? 1'b1
         : 1'bx;
     assign reg_we = (opcode == `OPC_LUI) | (opcode == `OPC_AUIPC) | (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_LOAD) | (opcode == `OPC_ARI_ITYPE)
         | (opcode == `OPC_ARI_RTYPE);

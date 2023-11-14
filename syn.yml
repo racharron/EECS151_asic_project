@@ -20,6 +20,7 @@ verilogSrc: &VERILOG_SRC
   - "src/Writeback.w"
   - "src/ld.v"
   - "src/Store.v"
+  - "src/StallHandler.v"
   # Add more source files here if you need
 
 

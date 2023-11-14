@@ -31,7 +31,7 @@ always @(*) begin
     `OPC_ARI_RTYPE, `OPC_ARI_ITYPE: begin
       case(funct)
         `FNC_ADD_SUB: begin
-          if (add_rshift_type == `FNC2_ADD) begin
+          if (add_rshift_type == `FNC2_ADD || opcode == `OPC_ARI_ITYPE) begin
             ALUop = `ALU_ADD;
           end else if (add_rshift_type == `FNC2_SUB) begin
             ALUop = `ALU_SUB;
@@ -59,6 +59,5 @@ always @(*) begin
     endcase
     default: ALUop = `ALU_XXX;
   endcase
-  $display("op: %b\tfunct: %b\tasrt: %b\talu: %d", opcode, funct, add_rshift_type, ALUop);
 end
 endmodule
