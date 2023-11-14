@@ -19,6 +19,7 @@ module Riscv151(
 );
 
   /// Adds a delay after reset to let everything propagate first
+  /// This is the value of reset from the previous cycle.
   reg prev_reset;
 
   wire [2:0] funct3_1, funct3_2, funct3_3;
@@ -75,9 +76,12 @@ module Riscv151(
   wire [31:0] store_data_2, store_data_3;
 
   /// Indicates if we should turn the following instructions into nops.
+  /// Signalled on taken jumps.
   wire bubble;
   /// Pause indicates that stage 3 is beginning a read, and everything should temporarily halt.
   /// Internal stall is a synonym for stall | pause
+  /// We also stall for a cycle after reset because otherwise the cache becomes undefined.
+  /// This is a hack, but it works.
   wire pause, internal_stall;
 
   assign dcache_re = mem_rr_3;
