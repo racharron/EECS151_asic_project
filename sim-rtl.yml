@@ -10,7 +10,7 @@ simOptions: &SIM_OPTIONS
   - "-debug"
   - "+vcs+lic+wait"
   - "+vcs+initreg+random"
-  - "+define+no_cache_mem"
+  #- "+define+no_cache_mem"
   - "+rad"
   - "-quiet"
   - "+define+DEBUG"
