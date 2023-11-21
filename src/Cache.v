@@ -44,13 +44,13 @@ module cache #
   localparam TAG_WIDTH = WORD_ADDR_BITS - INDEX_WIDTH - CACHE_ADDR_BITS; 
 
   wire cpu_req_is_write;
-  wire in_miss, next_state_is_miss;
+  wire in_hit, in_miss, next_state_is_miss;
   wire line_is_dirty;
   wire [1:0] current_dirty_cell;
   wire saving_line, cpu_writing;
 
   wire [WORD_ADDR_BITS-1:CACHE_ADDR_BITS+INDEX_WIDTH] tag;
-  wire [WORD_ADDR_BITS-TAG_WIDTH:CACHE_ADDR_BITS] index;
+  wire [WORD_ADDR_BITS-TAG_WIDTH-1:CACHE_ADDR_BITS] index;
   wire [CACHE_ADDR_BITS-1:0] word;
   wire [1:0] sram_lower, wordselect;
 
@@ -89,8 +89,8 @@ module cache #
   assign {sram_lower, wordselect} = word;
   assign {tag, index, word} = cpu_req_addr;
 
-  assign {meta_dout_present, meta_dout_dirty, meta_dout_tag} = meta_dout;
-  assign meta_din = {meta_din_present, meta_din_dirty, meta_din_tag};
+  assign {meta_dout_present, meta_dout_dirty, meta_dout_tag} = meta_dout[0+:1+4+TAG_WIDTH];
+  assign meta_din[0+:1+4+TAG_WIDTH] = {meta_din_present, meta_din_dirty, meta_din_tag};
 
   assign data_addr = {index, saving_line ? current_dirty_cell : next_state_is_miss ? current_sram_cell : sram_lower};
   assign meta_addr = index;
@@ -99,7 +99,7 @@ module cache #
   assign in_miss = state == CACHE_WRITE_MISS || state == CACHE_READ_MISS;
   assign next_state_is_miss = next_state == CACHE_WRITE_MISS || next_state == CACHE_READ_MISS;
   assign line_is_dirty = |meta_dout_dirty;
-  assign current_dirty_cell = meta_dout_dirty[0] ? 0 : meta_dout_dirty[1] ? 1 : meta_dout_dirty[2] ? 2 : 3;
+  assign current_dirty_cell = meta_dout_dirty[0] ? 2'd0 : meta_dout_dirty[1] ? 2'd1 : meta_dout_dirty[2] ? 2'd2 : 2'd3;
   assign saving_line = line_is_dirty && state == CACHE_WRITE_MISS;
   assign cpu_writing = state == QUERYING && cpu_req_is_write && in_hit;
 
@@ -117,14 +117,14 @@ module cache #
   assign mem_req_data_mask = 16'hFFFF;
 
   assign meta_wmask = 4'hF;
-  assign meta_din_present = 1;
+  assign meta_din_present = 1'b1;
   assign meta_we = (in_miss && !next_state_is_miss) || cpu_writing;
   assign meta_din_tag = tag;
   
   genvar i;
   generate
     for (i = 1; i < 4; i = i + 1) begin
-      assign data_we[i] = (cpu_writing && word == i) || waiting_on_mem && mem_resp_valid;
+      assign data_we[i] = (cpu_writing && word == i[3:0]) || waiting_on_mem && mem_resp_valid;
       assign data_wmask[i] = cpu_writing ? cpu_req_write : 4'hF;
       assign data_din[i] = cpu_writing ? cpu_req_data : mem_resp_data[CPU_WIDTH*i+:CPU_WIDTH];
     end
@@ -193,19 +193,19 @@ module cache #
     if (reset) begin
       state <= IDLE;
       current_sram_cell <= 2'd0;
-      waiting_on_mem <= 0;
+      waiting_on_mem <= 1'b0;
     end else begin
       state <= next_state;
       if (state == QUERYING && next_state_is_miss) begin
         current_sram_cell <= 2'd0;
-        waiting_on_mem <= 0;
+        waiting_on_mem <= 1'b0;
       end 
       if (in_miss && next_state_is_miss) begin
         if (waiting_on_mem && mem_resp_valid) begin
-          waiting_on_mem = 0;
-          current_sram_cell <= current_sram_cell + 1;
+          waiting_on_mem = 1'b0;
+          current_sram_cell <= current_sram_cell + 2'd1;
         end else if (!waiting_on_mem && mem_req_ready) begin
-          waiting_on_mem = 1;
+          waiting_on_mem = 1'b1;
         end
       end
     end
