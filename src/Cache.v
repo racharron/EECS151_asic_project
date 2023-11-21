@@ -95,7 +95,7 @@ module cache #
   assign data_addr = {index, saving_line ? current_dirty_cell : next_state_is_miss ? current_sram_cell : sram_lower};
   assign meta_addr = index;
 
-  assign in_hit = meta_dout_present && meta_dout_tag == tag || state == QUERYING;
+  assign in_hit = meta_dout_present && meta_dout_tag == tag && state == QUERYING;
   assign in_miss = state == CACHE_WRITE_MISS || state == CACHE_READ_MISS;
   assign next_state_is_miss = next_state == CACHE_WRITE_MISS || next_state == CACHE_READ_MISS;
   assign line_is_dirty = |meta_dout_dirty;
@@ -123,7 +123,7 @@ module cache #
   
   genvar i;
   generate
-    for (i = 1; i < 4; i = i + 1) begin
+    for (i = 0; i < 4; i = i + 1) begin
       assign data_we[i] = (cpu_writing && word == i[3:0]) || waiting_on_mem && mem_resp_valid;
       assign data_wmask[i] = cpu_writing ? cpu_req_write : 4'hF;
       assign data_din[i] = cpu_writing ? cpu_req_data : mem_resp_data[CPU_WIDTH*i+:CPU_WIDTH];
