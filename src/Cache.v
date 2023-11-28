@@ -52,7 +52,7 @@ module cache #
   wire [1:0] current_dirty_block;
   wire saving_line, cpu_writing;
 
-  reg line_present;
+  reg line_present, previously_in_miss;
   reg [3:0] line_dirty_blocks;
   reg [TAG_WIDTH-1:0] line_tag;
 
@@ -88,10 +88,17 @@ module cache #
 
   reg [1:0] current_cache_block;
 
+  /// Since the SRAM is synchronous, if we want to be able to output the result the cycle that we
+  /// are done getting a cache line, we need to save it outside of the SRAM so it can be accessed
+  /// immediately.
+  reg [CPU_WIDTH-1:0] async_cache;
+  /// The CPU may change the requested address each cycle, so if there is a miss, we need to store the previous address.
+  reg [WORD_ADDR_BITS-1:0] previous_address;
+
   assign cpu_req_is_write = |cpu_req_write;
   
   assign {sram_lower, wordselect} = word;
-  assign {tag, index, word} = cpu_req_addr;
+  assign {tag, index, word} = state == IDLE ? cpu_req_addr : previous_address;
 
   assign {meta_dout_present, meta_dout_dirty, meta_dout_tag} = meta_dout[0+:1+4+TAG_WIDTH];
   assign meta_din = {{(32-(1+4+TAG_WIDTH)){1'b0}}, meta_din_present, meta_din_dirty, meta_din_tag};
@@ -99,7 +106,7 @@ module cache #
   assign data_addr = {index, saving_line ? current_dirty_block : in_miss ? current_cache_block : sram_lower};
   assign meta_addr = index;
 
-  assign in_hit = meta_dout_present && meta_dout_tag == tag && state == QUERYING;
+  assign in_hit = (previously_in_miss && state == IDLE) || (meta_dout_present && meta_dout_tag == tag && state == QUERYING);
   assign in_miss = state == CACHE_WRITE_MISS || state == CACHE_READ_MISS;
   assign next_state_is_miss = next_state == CACHE_WRITE_MISS || next_state == CACHE_READ_MISS;
   assign line_is_dirty = |line_dirty_blocks;
@@ -111,7 +118,7 @@ module cache #
 
   assign cpu_req_ready = (state == IDLE && !prev_clearing && !clearing)/* || (state == QUERYING && in_hit)*/;
 
-  assign cpu_resp_data = data_dout[word];
+  assign cpu_resp_data = previously_in_miss ? async_cache : data_dout[wordselect];
 
   assign mem_req_rw = saving_line;
   assign mem_req_data_valid = saving_line;
@@ -122,13 +129,13 @@ module cache #
 
   assign meta_wmask = 4'hF;
   assign meta_din_present = !reset;
-  assign meta_we = in_miss || cpu_writing;
+  assign meta_we = (in_miss && mem_resp_valid) || cpu_writing;
   assign meta_din_tag = tag;
   
   genvar i;
   generate
     for (i = 0; i < 4; i = i + 1) begin
-      assign data_we[i] = cpu_writing ? wordselect == i[1:0] : mem_resp_valid;
+      assign data_we[i] = cpu_writing ? wordselect == i[1:0] : state == CACHE_READ_MISS && mem_resp_valid;
       assign data_wmask[i] = cpu_writing ? cpu_req_write : 4'hF;
       assign data_din[i] = cpu_writing ? cpu_req_data : mem_resp_data[CPU_WIDTH*i+:CPU_WIDTH];
       assign meta_din_dirty[i] = cpu_writing ? wordselect == i[1:0] || meta_dout_dirty[i] : 1'b0;
@@ -179,11 +186,11 @@ module cache #
       end
       CACHE_READ_MISS: begin
         if (mem_resp_valid && current_cache_block == 2'b11) begin
-          next_state = QUERYING;
+          next_state = IDLE;
         end
       end
       CACHE_WRITE_MISS: begin
-        if ({1'b0, line_dirty_blocks[0]} + {1'b0, line_dirty_blocks[1]} + {1'b0, line_dirty_blocks[2]} + {1'b0, line_dirty_blocks[3]}) begin
+        if ({1'b0, line_dirty_blocks[0]} + {1'b0, line_dirty_blocks[1]} + {1'b0, line_dirty_blocks[2]} + {1'b0, line_dirty_blocks[3]} == 2'b01) begin
           next_state = CACHE_READ_MISS;
         end
       end 
@@ -197,6 +204,8 @@ module cache #
       clearing <= 1'b1;
       prev_clearing <= 1'b0;
       clear_counter <= 6'd0;
+      line_dirty_blocks <= 4'd0;
+      previously_in_miss <= 1'b0;
     end else if (clearing) begin
       if (clear_counter == 6'h3F && prev_clearing) begin
         clearing <= 1'b0;
@@ -205,6 +214,9 @@ module cache #
       prev_clearing <= clearing;
     end else begin
       state <= next_state;
+      prev_clearing <= clearing;
+      if (state == IDLE && next_state == QUERYING) previous_address <= cpu_req_addr;
+      previously_in_miss <= in_miss;
       if (state == QUERYING && next_state_is_miss) begin
         current_cache_block <= 2'd0;
         line_present <= meta_dout_present;
@@ -213,6 +225,9 @@ module cache #
       end
       if (state == CACHE_READ_MISS && mem_resp_valid) begin
           current_cache_block <= current_cache_block + 2'd1;
+          if (current_cache_block == sram_lower) begin
+            async_cache <= data_din[wordselect];
+          end
       end
     end
   end
