@@ -56,9 +56,9 @@ module cache #
   reg [3:0] line_dirty_blocks;
   reg [TAG_WIDTH-1:0] line_tag;
 
-  wire [WORD_ADDR_BITS-1:CACHE_ADDR_BITS+INDEX_WIDTH] tag;
-  wire [WORD_ADDR_BITS-TAG_WIDTH-1:CACHE_ADDR_BITS] index;
-  wire [CACHE_ADDR_BITS-1:0] word;
+  wire [WORD_ADDR_BITS-1:CACHE_ADDR_BITS+INDEX_WIDTH] tag, prev_tag;
+  wire [WORD_ADDR_BITS-TAG_WIDTH-1:CACHE_ADDR_BITS] index, prev_index;
+  wire [CACHE_ADDR_BITS-1:0] word, prev_word;
   wire [1:0] sram_lower, wordselect;
 
   //valid bits 
@@ -75,9 +75,9 @@ module cache #
   localparam CACHE_READ_MISS = 2'b10;
   localparam CACHE_WRITE_MISS = 2'b11;
 
-  wire [3:0] meta_wmask;
   wire [3:0] data_wmask [4];
   wire meta_we; 
+  wire [3:0] meta_wmask;
   wire data_we [4];
   reg [7:0] data_addr;
   wire [5:0] meta_addr;
@@ -98,15 +98,16 @@ module cache #
   assign cpu_req_is_write = |cpu_req_write;
   
   assign {sram_lower, wordselect} = word;
-  assign {tag, index, word} = state == IDLE ? cpu_req_addr : previous_address;
+  assign {tag, index, word} = cpu_req_addr;
+  assign {prev_tag, prev_index, prev_word} = previous_address;
 
   assign {meta_dout_present, meta_dout_dirty, meta_dout_tag} = meta_dout[0+:1+4+TAG_WIDTH];
   assign meta_din = {{(32-(1+4+TAG_WIDTH)){1'b0}}, meta_din_present, meta_din_dirty, meta_din_tag};
 
-  assign data_addr = {index, saving_line ? current_dirty_block : in_miss ? current_cache_block : sram_lower};
-  assign meta_addr = index;
+  assign data_addr = {in_miss ? prev_index : index, saving_line ? current_dirty_block : in_miss ? current_cache_block : sram_lower};
+  assign meta_addr = in_miss ? prev_index : index;
 
-  assign in_hit = (previously_in_miss && state == IDLE) || (meta_dout_present && meta_dout_tag == tag && state == QUERYING);
+  assign in_hit = (previously_in_miss && state == IDLE) || (meta_dout_present && meta_dout_tag == prev_tag && state == QUERYING);
   assign in_miss = state == CACHE_WRITE_MISS || state == CACHE_READ_MISS;
   assign next_state_is_miss = next_state == CACHE_WRITE_MISS || next_state == CACHE_READ_MISS;
   assign line_is_dirty = |line_dirty_blocks;
@@ -116,14 +117,14 @@ module cache #
 
   assign cpu_resp_valid = in_hit;
 
-  assign cpu_req_ready = (state == IDLE && !prev_clearing && !clearing)/* || (state == QUERYING && in_hit)*/;
+  assign cpu_req_ready = (state == IDLE && !prev_clearing && !clearing) || (state == QUERYING && in_hit);
 
-  assign cpu_resp_data = previously_in_miss ? async_cache : data_dout[wordselect];
+  assign cpu_resp_data = previously_in_miss ? async_cache : data_dout[prev_word[1:0]];
 
   assign mem_req_rw = saving_line;
   assign mem_req_data_valid = saving_line;
   assign mem_req_valid = in_miss;
-  assign mem_req_addr = saving_line ? {tag, index, current_dirty_block} : {tag, index, current_cache_block};
+  assign mem_req_addr = {tag, index, saving_line ? current_dirty_block : current_cache_block};
   assign mem_req_data_bits = {data_dout[3], data_dout[2], data_dout[1], data_dout[0]};
   assign mem_req_data_mask = 16'hFFFF;
 
@@ -172,8 +173,7 @@ module cache #
       end
       QUERYING: begin
         if (in_hit) begin
-          //  Possible optimization: if cpu_req_valid, then do not leave QUERYING
-          next_state = IDLE;
+          if (!cpu_req_valid || !cpu_req_ready) next_state = IDLE;
           if (cpu_writing) begin
           end
         end else begin
@@ -215,7 +215,7 @@ module cache #
     end else begin
       state <= next_state;
       prev_clearing <= clearing;
-      if (state == IDLE && next_state == QUERYING) previous_address <= cpu_req_addr;
+      if (next_state == QUERYING) previous_address <= cpu_req_addr;
       previously_in_miss <= in_miss;
       if (state == QUERYING && next_state_is_miss) begin
         current_cache_block <= 2'd0;
@@ -226,7 +226,7 @@ module cache #
       if (state == CACHE_READ_MISS && mem_resp_valid) begin
           current_cache_block <= current_cache_block + 2'd1;
           if (current_cache_block == sram_lower) begin
-            async_cache <= data_din[wordselect];
+            async_cache <= data_din[prev_word[1:0]];
           end
       end
     end
