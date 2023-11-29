@@ -27,7 +27,7 @@ module Execute (
     assign forward_A = rs1 == prev_rd && prev_rd != 5'd0 && prev_reg_we;
     assign forward_B = rs2 == prev_rd && prev_rd != 5'd0 && prev_reg_we;
 
-    assign do_jump = is_jump & (!is_branch | condition_true);
+    assign do_jump = is_jump && (!is_branch || condition_true);
 
     assign store_data = forwarded_B;
 

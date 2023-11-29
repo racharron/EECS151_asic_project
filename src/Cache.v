@@ -124,7 +124,7 @@ module cache #
   assign mem_req_rw = saving_line;
   assign mem_req_data_valid = saving_line;
   assign mem_req_valid = in_miss;
-  assign mem_req_addr = {tag, index, saving_line ? current_dirty_block : current_cache_block};
+  assign mem_req_addr = {prev_tag, prev_index, saving_line ? current_dirty_block : current_cache_block};
   assign mem_req_data_bits = {data_dout[3], data_dout[2], data_dout[1], data_dout[0]};
   assign mem_req_data_mask = 16'hFFFF;
 
