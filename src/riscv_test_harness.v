@@ -88,6 +88,16 @@ module rocketTestHarness;
     .mem_resp_tag(mem_resp_tag)
   );
 
+  wire [29:0] waddr = {dut.mem.icache.prev_tag, dut.mem.icache.prev_index, dut.mem.icache.prev_word};
+  wire [31:0] ramword = int'(mem.ram[waddr[29:2]] >> (32*dut.mem.icache.prev_word[1:0]));
+
+  clean_icache_read_matches_mem: 
+  assert property (
+    @(posedge clk) disable iff (dut.mem.icache.reset | dut.mem.icache.clearing | dut.mem.icache.prev_clearing)
+    dut.mem.icache.cpu_resp_valid && !dut.mem.icache.line_dirty_blocks[dut.mem.icache.prev_word[1:0]] |-> dut.icache_dout == ramword
+  ) 
+  else   $error("Clean read of %h error: %h != %h", {waddr, 2'b00}, dut.icache_dout, ramword);
+
 
   // TODO: tohost/fromhost -> exit code (no longer through HTIF)
 
