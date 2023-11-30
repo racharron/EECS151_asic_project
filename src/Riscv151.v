@@ -91,6 +91,7 @@ module Riscv151(
 
   assign bubble = do_jump_2;
 
+  /// This is essentially a hack to make sure that dcache_re is not held high throughout a stall.
   assign dcache_re = mem_rr_3 && pause;
 
   /// This holds the PC value used for getting the next instruction.  
