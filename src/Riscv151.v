@@ -8,7 +8,7 @@ module Riscv151(
     output [31:0] dcache_addr,
     output [31:0] icache_addr,
     output [3:0] dcache_we,
-    output dcache_re,
+    output reg dcache_re,
     output icache_re,
     output [31:0] dcache_din,
     input [31:0] dcache_dout,
@@ -84,13 +84,14 @@ module Riscv151(
   /// This is a hack, but it works.
   wire pause, internal_stall;
 
-  assign dcache_re = mem_rr_3;
   assign icache_re = 1'b1;
   assign internal_stall = stall | pause | prev_reset;
 
   assign icache_addr = next_pc;
 
   assign bubble = do_jump_2;
+
+  assign dcache_re = mem_rr_3 && pause;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
@@ -167,17 +168,11 @@ module Riscv151(
     .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1})
   );
 
-  REGISTER_R_CE#(.N(3)) flags_buffer_2_3(
+  REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
     .clk(clk), .rst(reset),
     .ce(!internal_stall),
-    .q({reg_we_3, csr_write_3, do_jump_3}),
-    .d({reg_we_2, csr_write_2, do_jump_2})
-  );
-
-  REGISTER_R#(.N(2)) mem_flags_2_3(
-    .clk(clk), .rst(reset),
-    .q({mem_rr_3, mem_we_3}),
-    .d({mem_rr_2, mem_we_2})
+    .q({reg_we_3, csr_write_3, mem_rr_3, mem_we_3, do_jump_3}),
+    .d({reg_we_2, csr_write_2, mem_rr_2, mem_we_2, do_jump_2})
   );
 
   REGISTER_R_CE#(.N(2)) jump_flag_buffer_1_2(
