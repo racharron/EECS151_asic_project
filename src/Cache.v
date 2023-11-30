@@ -43,9 +43,6 @@ module cache #
   localparam CACHE_ADDR_BITS = 4;
   localparam TAG_WIDTH = WORD_ADDR_BITS - INDEX_WIDTH - CACHE_ADDR_BITS; 
 
-  reg clearing, prev_clearing;
-  reg [5:0] clear_counter;
-
   wire cpu_req_is_write;
   wire in_hit, in_miss, next_state_is_miss;
   wire line_is_dirty;
@@ -56,13 +53,15 @@ module cache #
   reg [3:0] line_dirty_blocks;
   reg [TAG_WIDTH-1:0] line_tag;
 
+  reg [63:0] meta_present;
+
   wire [WORD_ADDR_BITS-1:CACHE_ADDR_BITS+INDEX_WIDTH] tag, prev_tag;
   wire [WORD_ADDR_BITS-TAG_WIDTH-1:CACHE_ADDR_BITS] index, prev_index;
   wire [CACHE_ADDR_BITS-1:0] word, prev_word;
   wire [1:0] sram_lower, wordselect;
 
   //valid bits 
-  wire meta_dout_present, meta_din_present;
+  reg meta_dout_present;
   //dirty bits
   wire [3:0] meta_dout_dirty, meta_din_dirty;
   wire [TAG_WIDTH-1:0] meta_dout_tag, meta_din_tag;
@@ -101,8 +100,8 @@ module cache #
   assign {tag, index, word} = cpu_req_addr;
   assign {prev_tag, prev_index, prev_word} = previous_address;
 
-  assign {meta_dout_present, meta_dout_dirty, meta_dout_tag} = meta_dout[0+:1+4+TAG_WIDTH];
-  assign meta_din = {{(32-(1+4+TAG_WIDTH)){1'b0}}, meta_din_present, meta_din_dirty, meta_din_tag};
+  assign {meta_dout_dirty, meta_dout_tag} = meta_dout[0+:4+TAG_WIDTH];
+  assign meta_din = {{(32-(4+TAG_WIDTH)){1'b0}}, meta_din_dirty, meta_din_tag};
 
   assign data_addr = {in_miss ? prev_index : index, saving_line ? current_dirty_block : in_miss ? current_cache_block : sram_lower};
   assign meta_addr = in_miss ? prev_index : index;
@@ -117,19 +116,18 @@ module cache #
 
   assign cpu_resp_valid = in_hit;
 
-  assign cpu_req_ready = (state == IDLE && !prev_clearing && !clearing) || (state == QUERYING && in_hit);
+  assign cpu_req_ready = state == IDLE || (state == QUERYING && in_hit);
 
   assign cpu_resp_data = previously_in_miss ? async_cache : data_dout[prev_word[1:0]];
 
   assign mem_req_rw = saving_line;
   assign mem_req_data_valid = saving_line;
-  assign mem_req_valid = in_miss;
-  assign mem_req_addr = {prev_tag, prev_index, saving_line ? current_dirty_block : current_cache_block};
+  assign mem_req_valid = in_miss && current_cache_block == 2'd0;
+  assign mem_req_addr = {prev_tag, prev_index, saving_line ? current_dirty_block : 2'b00};
   assign mem_req_data_bits = {data_dout[3], data_dout[2], data_dout[1], data_dout[0]};
   assign mem_req_data_mask = 16'hFFFF;
 
   assign meta_wmask = 4'hF;
-  assign meta_din_present = !reset;
   assign meta_we = (in_miss && mem_resp_valid) || cpu_writing;
   assign meta_din_tag = tag;
   
@@ -156,16 +154,16 @@ module cache #
   // {valid, tag}
   sram22_64x32m4w8 sramMeta (
     .clk(clk),
-    .we(meta_we || clearing),
+    .we(meta_we),
     .wmask(meta_wmask),
-    .addr(clearing ? clear_counter : meta_addr),
-    .din(clearing ? 32'd0 : meta_din),
+    .addr(meta_addr),
+    .din(meta_din),
     .dout(meta_dout)
   );
 
   always @(*) begin
     next_state = state;
-    if (!clearing) case (state)
+    case (state)
       IDLE: begin
         if (cpu_req_valid && cpu_req_ready) begin
           next_state = QUERYING;
@@ -190,7 +188,7 @@ module cache #
         end
       end
       CACHE_WRITE_MISS: begin
-        if ({1'b0, line_dirty_blocks[0]} + {1'b0, line_dirty_blocks[1]} + {1'b0, line_dirty_blocks[2]} + {1'b0, line_dirty_blocks[3]} == 2'b01) begin
+        if (!line_is_dirty || {1'b0, line_dirty_blocks[0]} + {1'b0, line_dirty_blocks[1]} + {1'b0, line_dirty_blocks[2]} + {1'b0, line_dirty_blocks[3]} == 2'b01) begin
           next_state = CACHE_READ_MISS;
         end
       end 
@@ -201,20 +199,12 @@ module cache #
     if (reset) begin
       state <= IDLE;
       current_cache_block <= 2'd0;
-      clearing <= 1'b1;
-      prev_clearing <= 1'b0;
-      clear_counter <= 6'd0;
       line_dirty_blocks <= 4'd0;
       previously_in_miss <= 1'b0;
-    end else if (clearing) begin
-      if (clear_counter == 6'h3F && prev_clearing) begin
-        clearing <= 1'b0;
-      end
-      clear_counter <= clear_counter + 6'd1;
-      prev_clearing <= clearing;
+      meta_present <= 64'd0;
     end else begin
       state <= next_state;
-      prev_clearing <= clearing;
+      meta_dout_present <= meta_present[meta_addr];
       if (next_state == QUERYING) previous_address <= cpu_req_addr;
       previously_in_miss <= in_miss;
       if (state == QUERYING && next_state_is_miss) begin
@@ -228,6 +218,9 @@ module cache #
           if (current_cache_block == sram_lower) begin
             async_cache <= data_din[prev_word[1:0]];
           end
+      end
+      if (in_miss && !next_state_is_miss) begin
+        meta_present[prev_index] <= 1'b1;
       end
     end
   end

@@ -230,7 +230,7 @@ module Riscv151(
     .d(rd_2)
   );
 
-  StallHandler stall_handler(clk, internal_stall, icache_dout, instruction);
+  StallHandler stall_handler(clk, internal_stall, reset, icache_dout, instruction);
 
   DecodeRead stage1(
       .stall(internal_stall), .bubble(bubble | reset),

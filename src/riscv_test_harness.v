@@ -93,7 +93,7 @@ module rocketTestHarness;
 
   clean_icache_read_matches_mem: 
   assert property (
-    @(posedge clk) disable iff (dut.mem.icache.reset | dut.mem.icache.clearing | dut.mem.icache.prev_clearing)
+    @(posedge clk) disable iff (dut.mem.icache.reset)
     dut.mem.icache.cpu_resp_valid && !dut.mem.icache.line_dirty_blocks[dut.mem.icache.prev_word[1:0]] |-> dut.icache_dout == ramword
   ) 
   else   $error("Clean read of %h error: %h != %h", {waddr, 2'b00}, dut.icache_dout, ramword);
