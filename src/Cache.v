@@ -44,12 +44,9 @@ module cache #
   localparam TAG_WIDTH = WORD_ADDR_BITS - INDEX_WIDTH - CACHE_ADDR_BITS; 
 
   wire cpu_req_is_write;
-  wire in_hit, in_miss, next_state_is_miss;
-  wire line_is_dirty;
+  wire in_hit, in_miss, next_state_is_miss, in_write;
+  wire line_is_dirty, saving_line;
   wire [1:0] current_dirty_block;
-  /// saving_line indicates if we are currently saving a dirty cache line
-  /// direct_writing indicates if we are simply writing directly to the cache line
-  wire saving_line, direct_writing;
 
   reg line_present, previously_in_miss;
   reg [3:0] line_dirty_blocks;
@@ -68,15 +65,15 @@ module cache #
   wire [3:0] meta_dout_dirty, meta_din_dirty;
   wire [TAG_WIDTH-1:0] meta_dout_tag, meta_din_tag;
 
-  reg [1:0] state, next_state;
+  reg [2:0] state, next_state;
   //  The cache is not doing anything at the moment, and is open to requests
-  localparam IDLE = 2'b00;
+  localparam IDLE = 3'b000;
   //  The cache is checking the metadata.  If there is a cache hit, 4+TAG_WIDTH then 
-  localparam QUERYING = 2'b01;
-  localparam CACHE_READ_MISS = 2'b10;
-  localparam CACHE_WRITE_MISS = 2'b11;
+  localparam READ_QUERY = 3'b001;
+  localparam WRITE_QUERY = 3'b011;
+  localparam CACHE_READ_MISS = 3'b100;
+  localparam CACHE_WRITE_MISS = 3'b110;
 
-  wire [3:0] data_wmask [4];
   wire meta_we; 
   wire [3:0] meta_wmask;
   wire data_we [4];
@@ -108,45 +105,48 @@ module cache #
   assign data_addr = {in_miss ? prev_index : index, saving_line ? current_dirty_block : in_miss ? current_cache_block : sram_lower};
   assign meta_addr = in_miss ? prev_index : index;
 
-  assign in_hit = (previously_in_miss && state == IDLE) || (meta_dout_present && meta_dout_tag == prev_tag && state == QUERYING);
+  assign in_hit = (previously_in_miss && (state == IDLE || state == WRITE_QUERY)) 
+    || (meta_dout_present && meta_dout_tag == prev_tag && state == READ_QUERY);
   assign in_miss = state == CACHE_WRITE_MISS || state == CACHE_READ_MISS;
   assign next_state_is_miss = next_state == CACHE_WRITE_MISS || next_state == CACHE_READ_MISS;
   assign line_is_dirty = |line_dirty_blocks;
+  assign in_write = state == WRITE_QUERY || state == CACHE_WRITE_MISS;
   assign current_dirty_block = line_dirty_blocks[0] ? 2'd0 : line_dirty_blocks[1] ? 2'd1 : line_dirty_blocks[2] ? 2'd2 : 2'd3;
   assign saving_line = line_is_dirty && state == CACHE_WRITE_MISS;
-  assign direct_writing = state == QUERYING && cpu_req_is_write && in_hit;
+  assign direct_writing = state == READ_QUERY && cpu_req_is_write && in_hit;
 
   assign cpu_resp_valid = in_hit;
 
-  assign cpu_req_ready = state == IDLE || (state == QUERYING && in_hit);
+  assign cpu_req_ready = state == IDLE || (state == READ_QUERY && in_hit);
 
   assign cpu_resp_data = previously_in_miss ? async_cache : data_dout[prev_word[1:0]];
 
   assign mem_req_rw = saving_line;
   assign mem_req_data_valid = saving_line;
-  assign mem_req_valid = in_miss && current_cache_block == 2'd0;
-  assign mem_req_addr = {prev_tag, prev_index, saving_line ? current_dirty_block : 2'b00};
+  assign mem_req_valid = saving_line || (in_miss && current_cache_block == 2'd0);
+  assign mem_req_addr = saving_line ? {line_tag, prev_index, current_dirty_block} : {prev_tag, prev_index, 2'b00};
   assign mem_req_data_bits = {data_dout[3], data_dout[2], data_dout[1], data_dout[0]};
   assign mem_req_data_mask = 16'hFFFF;
 
   assign meta_wmask = 4'hF;
-  assign meta_we = (in_miss && mem_resp_valid) || direct_writing;
+  assign meta_we = in_miss && !next_state_is_miss;
   assign meta_din_tag = tag;
   
   genvar i;
   generate
     for (i = 0; i < 4; i = i + 1) begin
-      assign data_we[i] = direct_writing ? wordselect == i[1:0] : state == CACHE_READ_MISS && mem_resp_valid;
-      assign data_wmask[i] = direct_writing ? cpu_req_write : 4'hF;
-      assign data_din[i] = direct_writing ? cpu_req_data : mem_resp_data[CPU_WIDTH*i+:CPU_WIDTH];
-      assign meta_din_dirty[i] = direct_writing ? wordselect == i[1:0] || meta_dout_dirty[i] : 1'b0;
+      assign data_we[i] = (state == CACHE_READ_MISS && mem_resp_valid)
+        || (state == WRITE_QUERY && in_hit && prev_word[1:0] == i[1:0])
+        || (state == CACHE_WRITE_MISS && !line_present && mem_resp_valid);
+      assign data_din[i] = (state == WRITE_QUERY && in_hit) ? cpu_req_data : mem_resp_data[CPU_WIDTH*i+:CPU_WIDTH];
+      assign meta_din_dirty[i] = (state == WRITE_QUERY && in_hit) ? prev_word[1:0] == i[1:0] || line_dirty_blocks[i] : prev_word[1:0] == i[1:0];
     end
   endgenerate
 
   sram22_256x32m4w8 sramData[3:0] (
     .clk(clk),
     .we(data_we),
-    .wmask(data_wmask),
+    .wmask(state == WRITE_QUERY ? cpu_req_write : 4'hF),
     .addr(data_addr),
     .din(data_din),
     .dout(data_dout)
@@ -168,20 +168,25 @@ module cache #
     case (state)
       IDLE: begin
         if (cpu_req_valid && cpu_req_ready) begin
-          next_state = QUERYING;
+          if (cpu_req_is_write) begin
+            next_state = WRITE_QUERY;
+          end else begin
+            next_state = READ_QUERY;
+          end
         end
       end
-      QUERYING: begin
+      READ_QUERY: begin
         if (in_hit) begin
           if (!cpu_req_valid || !cpu_req_ready) next_state = IDLE;
-          if (direct_writing) begin
-          end
         end else begin
-          if (cpu_req_is_write && line_is_dirty) begin
-            next_state = CACHE_WRITE_MISS;
-          end else begin
-            next_state = CACHE_READ_MISS;
-          end
+          next_state = CACHE_READ_MISS;
+        end
+      end
+      WRITE_QUERY: begin
+        if (!meta_dout_present || !in_hit) begin
+          next_state = CACHE_WRITE_MISS;
+        end else begin
+          next_state = IDLE;
         end
       end
       CACHE_READ_MISS: begin
@@ -190,8 +195,8 @@ module cache #
         end
       end
       CACHE_WRITE_MISS: begin
-        if (!line_is_dirty || {1'b0, line_dirty_blocks[0]} + {1'b0, line_dirty_blocks[1]} + {1'b0, line_dirty_blocks[2]} + {1'b0, line_dirty_blocks[3]} == 2'b01) begin
-          next_state = CACHE_READ_MISS;
+        if (mem_resp_valid && current_cache_block == 2'b11) begin
+          next_state = WRITE_QUERY;
         end
       end 
     endcase
@@ -207,19 +212,27 @@ module cache #
     end else begin
       state <= next_state;
       meta_dout_present <= meta_present[meta_addr];
-      if (next_state == QUERYING) previous_address <= cpu_req_addr;
       previously_in_miss <= in_miss;
-      if (state == QUERYING && next_state_is_miss) begin
+      if (next_state == READ_QUERY || next_state == WRITE_QUERY) previous_address <= cpu_req_addr;
+      if (state == READ_QUERY || state == WRITE_QUERY && next_state_is_miss) begin
         current_cache_block <= 2'd0;
         line_present <= meta_dout_present;
         line_dirty_blocks <= meta_dout_dirty;
         line_tag <= meta_dout_tag;
       end
-      if (state == CACHE_READ_MISS && mem_resp_valid) begin
+      if (in_miss) begin
+        if (line_is_dirty && mem_req_ready) begin
+          line_dirty_blocks[current_dirty_block] <= 1'b0;
+        end
+        if (mem_resp_valid && !line_is_dirty) begin
           current_cache_block <= current_cache_block + 2'd1;
-          if (current_cache_block == sram_lower) begin
+          if (state == CACHE_READ_MISS && current_cache_block == sram_lower) begin
             async_cache <= data_din[prev_word[1:0]];
           end
+        end
+        if (next_state == WRITE_QUERY) begin
+          meta_dout_present <= 1'b1;
+        end
       end
       if (in_miss && !next_state_is_miss) begin
         meta_present[prev_index] <= 1'b1;
