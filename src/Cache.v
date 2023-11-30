@@ -47,7 +47,9 @@ module cache #
   wire in_hit, in_miss, next_state_is_miss;
   wire line_is_dirty;
   wire [1:0] current_dirty_block;
-  wire saving_line, cpu_writing;
+  /// saving_line indicates if we are currently saving a dirty cache line
+  /// direct_writing indicates if we are simply writing directly to the cache line
+  wire saving_line, direct_writing;
 
   reg line_present, previously_in_miss;
   reg [3:0] line_dirty_blocks;
@@ -112,7 +114,7 @@ module cache #
   assign line_is_dirty = |line_dirty_blocks;
   assign current_dirty_block = line_dirty_blocks[0] ? 2'd0 : line_dirty_blocks[1] ? 2'd1 : line_dirty_blocks[2] ? 2'd2 : 2'd3;
   assign saving_line = line_is_dirty && state == CACHE_WRITE_MISS;
-  assign cpu_writing = state == QUERYING && cpu_req_is_write && in_hit;
+  assign direct_writing = state == QUERYING && cpu_req_is_write && in_hit;
 
   assign cpu_resp_valid = in_hit;
 
@@ -128,16 +130,16 @@ module cache #
   assign mem_req_data_mask = 16'hFFFF;
 
   assign meta_wmask = 4'hF;
-  assign meta_we = (in_miss && mem_resp_valid) || cpu_writing;
+  assign meta_we = (in_miss && mem_resp_valid) || direct_writing;
   assign meta_din_tag = tag;
   
   genvar i;
   generate
     for (i = 0; i < 4; i = i + 1) begin
-      assign data_we[i] = cpu_writing ? wordselect == i[1:0] : state == CACHE_READ_MISS && mem_resp_valid;
-      assign data_wmask[i] = cpu_writing ? cpu_req_write : 4'hF;
-      assign data_din[i] = cpu_writing ? cpu_req_data : mem_resp_data[CPU_WIDTH*i+:CPU_WIDTH];
-      assign meta_din_dirty[i] = cpu_writing ? wordselect == i[1:0] || meta_dout_dirty[i] : 1'b0;
+      assign data_we[i] = direct_writing ? wordselect == i[1:0] : state == CACHE_READ_MISS && mem_resp_valid;
+      assign data_wmask[i] = direct_writing ? cpu_req_write : 4'hF;
+      assign data_din[i] = direct_writing ? cpu_req_data : mem_resp_data[CPU_WIDTH*i+:CPU_WIDTH];
+      assign meta_din_dirty[i] = direct_writing ? wordselect == i[1:0] || meta_dout_dirty[i] : 1'b0;
     end
   endgenerate
 
@@ -172,7 +174,7 @@ module cache #
       QUERYING: begin
         if (in_hit) begin
           if (!cpu_req_valid || !cpu_req_ready) next_state = IDLE;
-          if (cpu_writing) begin
+          if (direct_writing) begin
           end
         end else begin
           if (cpu_req_is_write && line_is_dirty) begin
