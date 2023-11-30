@@ -4,20 +4,20 @@ module StallHandler (
     output [31:0] out
 );
 
-    reg [31:0] prev_in, stall_in;
+    reg [31:0] prev_in;
     reg prev_stall, occupied;
 
-    assign out = occupied && stall? prev_in : occupied && prev_stall ? stall_in : in;
+    assign out = occupied && prev_stall ? prev_in : in;
 
     always @(posedge clk) begin
-        if (!stall && !reset) begin
+        if (stall && !prev_stall) begin
             prev_in <= in;
             occupied <= 1'b1;
         end
-        if (stall) begin
-            stall_in <= in;
+        if (reset) begin
+            occupied <= 1'b0;
+            prev_stall <= 1'b0;
         end
-        if (reset) occupied <= 1'b0;
         prev_stall <= stall;
     end
     
