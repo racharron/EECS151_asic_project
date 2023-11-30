@@ -71,7 +71,7 @@ module cache #
   reg [1:0] state, next_state;
   //  The cache is not doing anything at the moment, and is open to requests
   localparam IDLE = 2'b00;
-  //  The cache is checking the metadata.  If there is a cache hit,1+4+TAG_WIDTH then 
+  //  The cache is checking the metadata.  If there is a cache hit, 4+TAG_WIDTH then 
   localparam QUERYING = 2'b01;
   localparam CACHE_READ_MISS = 2'b10;
   localparam CACHE_WRITE_MISS = 2'b11;
