@@ -167,11 +167,17 @@ module Riscv151(
     .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1})
   );
 
-  REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
+  REGISTER_R_CE#(.N(4)) flags_buffer_2_3(
     .clk(clk), .rst(reset),
     .ce(!internal_stall),
-    .q({reg_we_3, csr_write_3, mem_we_3, mem_rr_3, do_jump_3}),
-    .d({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, do_jump_2})
+    .q({reg_we_3, csr_write_3, mem_we_3, do_jump_3}),
+    .d({reg_we_2, csr_write_2, mem_we_2, do_jump_2})
+  );
+
+  REGISTER_R#(.N(1)) mem_rr_flag_2_3(
+    .clk(clk), .rst(reset),
+    .q(mem_rr_3),
+    .d(mem_rr_2)
   );
 
   REGISTER_R_CE#(.N(2)) jump_flag_buffer_1_2(
@@ -230,8 +236,8 @@ module Riscv151(
     .d(rd_2)
   );
 
-  // StallHandler stall_handler(clk, internal_stall, reset, icache_dout, instruction);
-  assign instruction = icache_dout;
+  StallHandler stall_handler(clk, internal_stall, reset, icache_dout, instruction);
+  // assign instruction = icache_dout;
 
   DecodeRead stage1(
       .stall(internal_stall), .bubble(bubble | reset),
