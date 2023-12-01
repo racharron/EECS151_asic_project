@@ -78,21 +78,18 @@ module Riscv151(
   /// Indicates if we should turn the following instructions into nops.
   /// Signalled on taken jumps.
   wire bubble;
-  /// Pause indicates that stage 3 is beginning a read, and everything should temporarily halt.
-  /// Internal stall is a synonym for stall | pause
   /// We also stall for a cycle after reset because otherwise the cache becomes undefined.
   /// This is a hack, but it works.
-  wire pause, internal_stall;
+  wire internal_stall;
 
   assign icache_re = 1'b1;
-  assign internal_stall = stall | pause | prev_reset;
+  assign internal_stall = stall | prev_reset;
 
   assign icache_addr = next_pc;
 
   assign bubble = do_jump_2;
 
-  /// This is essentially a hack to make sure that dcache_re is not held high throughout a stall.
-  assign dcache_re = mem_rr_3 && pause;
+  assign dcache_re = mem_rr_2;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
@@ -261,26 +258,25 @@ module Riscv151(
     .rs1(rs1_2), .rs2(rs2_2), .prev_rd(rd_3),
 
     .prev_reg_we(reg_we_3),
+    .mem_we(mem_we_2),
 
     .a_sel(a_sel_2), .b_sel(b_sel_2),
 
     .do_jump(do_jump_2),
-    .result(alu_result_2), .store_data(store_data_2)
+    .result(alu_result_2), .store_data(dcache_din), .store_address(dcache_addr),
+    .bwe(dcache_we)
   );
 
   assign dcache_addr = {alu_result_3[31:2], 2'b00};
 
   Writeback stage3 (
-    .clk(clk), .reset(reset), .stall(internal_stall),
+    .clk(clk),
     .pc(pc_3),
     .alu_result(alu_result_3),
-    .write_data(store_data_3),
     .dcache_output(dcache_dout),
     .funct3(funct3_3),
-    .reg_we(reg_we_3), .mem_we(mem_we_3), .mem_rr(mem_rr_3), .do_jump(do_jump_3),
-    .writeback(writeback), .memory_out(dcache_din),
-    .mem_bytes_we(dcache_we),
-    .initial_pause(pause)
+    .reg_we(reg_we_3), .mem_rr(mem_rr_3), .do_jump(do_jump_3),
+    .writeback(writeback)
   );
 
   always @(posedge clk) prev_reset <= reset;

@@ -6,17 +6,20 @@ module Execute (
     input [2:0] funct3,
 
     input [4:0] rs1, rs2, prev_rd,
-    input prev_reg_we,
+    input prev_reg_we, mem_we,
 
     input a_sel, b_sel,
 
     output do_jump,
-    output [31:0] result, store_data
+    output [31:0] result, store_data, store_address,
+    output [3:0] bwe
 );
 
     wire [31:0] A, B, forwarded_A, forwarded_B;
+    wire [31:0] address;
     wire forward_A, forward_B;
     wire condition_true;
+    wire [3:0] store_bytes;
     
     assign A = a_sel ? forwarded_A : pc;
     assign B = b_sel ? imm : forwarded_B;
@@ -29,7 +32,17 @@ module Execute (
 
     assign do_jump = is_jump && (!is_branch || condition_true);
 
-    assign store_data = forwarded_B;
+    assign address = forward_A + imm;
+    assign store_address = {address[31:2], 2'd0};
+    assign bwe = mem_we ? store_bytes : 4'h0;
+
+    Store store_unit(
+        .addr(address), .value(forwarded_B),
+        .funct3(funct3),
+        .we(mem_we),
+        .bwe(store_bytes),
+        .write_out(store_data)
+    );
 
     ALU alu(A, B, alu_op, result);
 
