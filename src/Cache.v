@@ -43,6 +43,8 @@ module cache #
   localparam CACHE_ADDR_BITS = 4;
   localparam TAG_WIDTH = WORD_ADDR_BITS - INDEX_WIDTH - CACHE_ADDR_BITS; 
 
+  reg [31:0] prev_resp;
+
   wire cpu_req_is_write;
   wire in_hit, in_miss, next_state_is_miss, in_write;
   wire line_is_dirty, saving_line;
@@ -125,7 +127,7 @@ module cache #
 
   assign cpu_req_ready = state == IDLE || (state == READ_QUERY && in_hit);
 
-  assign cpu_resp_data = previously_in_miss ? async_cache : data_dout[prev_word[1:0]];
+  assign cpu_resp_data = previously_in_miss ? async_cache : state == IDLE ? prev_resp : data_dout[prev_word[1:0]];
 
   assign mem_req_rw = saving_line;
   assign mem_req_data_valid = saving_line;
@@ -230,6 +232,9 @@ module cache #
         line_present <= meta_dout_present;
         line_dirty_blocks <= meta_dout_dirty;
         line_tag <= meta_dout_tag;
+      end
+      if (state == READ_QUERY) begin
+        prev_resp <= cpu_resp_data;
       end
       if (in_miss) begin
         if (line_is_dirty && mem_req_ready) begin
