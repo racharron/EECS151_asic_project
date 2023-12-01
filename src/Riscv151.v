@@ -267,8 +267,6 @@ module Riscv151(
     .bwe(dcache_we)
   );
 
-  assign dcache_addr = {alu_result_3[31:2], 2'b00};
-
   Writeback stage3 (
     .clk(clk),
     .pc(pc_3),
