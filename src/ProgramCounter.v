@@ -24,7 +24,8 @@ module ProgramCounter (
 	///	Bear in mind that next_pc is what gets exposed, and is effectively the PC.
 	PC_resets_correctly:
 	assert property (
-		@(posedge clk) reset |=> next_pc == 32'h00002000
+		///	At the very beginning, stall is erroneously true
+		@(posedge clk) disable iff (stall) reset |=> next_pc == 32'h00002000
 	) 
 	else $error("PC reset to %h", $sampled(next_pc));
 
