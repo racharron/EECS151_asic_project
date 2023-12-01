@@ -121,7 +121,6 @@ module cache #
   assign in_write = state == WRITE_QUERY || state == CACHE_WRITE_MISS;
   assign current_dirty_block = line_dirty_blocks[0] ? 2'd0 : line_dirty_blocks[1] ? 2'd1 : line_dirty_blocks[2] ? 2'd2 : 2'd3;
   assign saving_line = line_is_dirty && state == CACHE_WRITE_MISS;
-  assign direct_writing = state == READ_QUERY && cpu_req_is_write && in_hit;
 
   assign cpu_resp_valid = in_hit;
 
