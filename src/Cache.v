@@ -108,13 +108,13 @@ module cache #
   assign meta_din = {{(32-(4+TAG_WIDTH)){1'b0}}, meta_din_dirty, meta_din_tag};
 
   assign data_addr = {
-    in_miss ? prev_index : index,
-    saving_line ? current_dirty_block : in_miss ? current_cache_block : previously_in_miss && state == WRITE_QUERY ? prev_word[3:2] : sram_lower
+    in_miss || state == WRITE_QUERY ? prev_index : index,
+    saving_line ? current_dirty_block : in_miss ? current_cache_block : state == WRITE_QUERY ? prev_word[3:2] : sram_lower
   };
   assign meta_addr = in_miss ? prev_index : index;
 
   assign in_hit = (previously_in_miss && (state == IDLE || state == WRITE_QUERY)) 
-    || (meta_dout_present && meta_dout_tag == prev_tag && state == READ_QUERY);
+    || (meta_dout_present && meta_dout_tag == prev_tag && (state == READ_QUERY || state == WRITE_QUERY));
   assign in_miss = state == CACHE_WRITE_MISS || state == CACHE_READ_MISS;
   assign next_state_is_miss = next_state == CACHE_WRITE_MISS || next_state == CACHE_READ_MISS;
   assign line_is_dirty = |line_dirty_blocks;
@@ -122,7 +122,7 @@ module cache #
   assign current_dirty_block = line_dirty_blocks[0] ? 2'd0 : line_dirty_blocks[1] ? 2'd1 : line_dirty_blocks[2] ? 2'd2 : 2'd3;
   assign saving_line = line_is_dirty && state == CACHE_WRITE_MISS;
 
-  assign cpu_resp_valid = in_hit;
+  assign cpu_resp_valid = (state == READ_QUERY || state == IDLE) && in_hit;
 
   assign cpu_req_ready = state == IDLE || (state == READ_QUERY && in_hit);
 
@@ -190,10 +190,10 @@ module cache #
         end
       end
       WRITE_QUERY: begin
-        if (!meta_dout_present || !in_hit) begin
-          next_state = CACHE_WRITE_MISS;
-        end else begin
+        if (in_hit) begin
           next_state = IDLE;
+        end else begin
+          next_state = CACHE_WRITE_MISS;
         end
       end
       CACHE_READ_MISS: begin
