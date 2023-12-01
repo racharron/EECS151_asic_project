@@ -37,6 +37,8 @@ module Riscv151(
   wire [31:0] instruction;
   /// We need to deal with potential stalls immediately after loads, so we need to save the dcache_dout in that case.
   wire [31:0] mem_out;
+  /// We shouldn't request a memory transaction on a stall
+  wire [3:0] bwe;
 
   /// Signals indicating if this instruction should cause a jump.
   /// jump_3 is also the bubble signal.
@@ -91,7 +93,8 @@ module Riscv151(
 
   assign bubble = do_jump_2;
 
-  assign dcache_re = mem_rr_2;
+  assign dcache_re = mem_rr_2 && !internal_stall;
+  assign dcache_we = internal_stall ? 4'h0 : bwe;
 
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
@@ -268,7 +271,7 @@ module Riscv151(
 
     .do_jump(do_jump_2),
     .result(alu_result_2), .store_data(dcache_din), .store_address(dcache_addr),
-    .bwe(dcache_we)
+    .bwe(bwe)
   );
 
   Writeback stage3 (
