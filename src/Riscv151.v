@@ -8,7 +8,7 @@ module Riscv151(
     output [31:0] dcache_addr,
     output [31:0] icache_addr,
     output [3:0] dcache_we,
-    output reg dcache_re,
+    output dcache_re,
     output icache_re,
     output [31:0] dcache_din,
     input [31:0] dcache_dout,
