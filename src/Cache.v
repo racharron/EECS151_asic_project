@@ -105,7 +105,10 @@ module cache #
   assign {meta_dout_dirty, meta_dout_tag} = meta_dout[0+:4+TAG_WIDTH];
   assign meta_din = {{(32-(4+TAG_WIDTH)){1'b0}}, meta_din_dirty, meta_din_tag};
 
-  assign data_addr = {in_miss ? prev_index : index, saving_line ? current_dirty_block : in_miss ? current_cache_block : sram_lower};
+  assign data_addr = {
+    in_miss ? prev_index : index,
+    saving_line ? current_dirty_block : in_miss ? current_cache_block : previously_in_miss && state == WRITE_QUERY ? prev_word[3:2] : sram_lower
+  };
   assign meta_addr = in_miss ? prev_index : index;
 
   assign in_hit = (previously_in_miss && (state == IDLE || state == WRITE_QUERY)) 
@@ -217,7 +220,7 @@ module cache #
       previously_in_miss <= in_miss;
       if (in_miss && next_state == WRITE_QUERY) meta_dout_present <= 1'b1;
       else meta_dout_present <= meta_present[meta_addr];
-      if (next_state == READ_QUERY || next_state == WRITE_QUERY) previous_address <= cpu_req_addr;
+      if (!in_miss && (next_state == READ_QUERY || next_state == WRITE_QUERY)) previous_address <= cpu_req_addr;
       if (next_state == WRITE_QUERY && !in_miss) begin
         prev_req_data <= cpu_req_data;
         prev_req_write <= cpu_req_write;

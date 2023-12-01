@@ -35,6 +35,8 @@ module Riscv151(
 
   /// The instruction that stage 1 can see.  Outputted by the stall handler.
   wire [31:0] instruction;
+  /// We need to deal with potential stalls immediately after loads, so we need to save the dcache_dout in that case.
+  wire [31:0] mem_out;
 
   /// Signals indicating if this instruction should cause a jump.
   /// jump_3 is also the bubble signal.
@@ -229,8 +231,10 @@ module Riscv151(
     .d(rd_2)
   );
 
-  // StallHandler stall_handler(clk, internal_stall, reset, icache_dout, instruction);
   assign instruction = icache_dout;
+
+  // StallHandler stall_handler(clk, internal_stall, reset, dcache_dout, mem_out);
+  assign mem_out = dcache_dout;
 
   DecodeRead stage1(
       .stall(internal_stall), .bubble(bubble | reset),
@@ -271,7 +275,7 @@ module Riscv151(
     .clk(clk),
     .pc(pc_3),
     .alu_result(alu_result_3),
-    .dcache_output(dcache_dout),
+    .dcache_output(mem_out),
     .funct3(funct3_3),
     .reg_we(reg_we_3), .mem_rr(mem_rr_3), .do_jump(do_jump_3),
     .writeback(writeback)

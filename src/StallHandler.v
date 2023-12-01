@@ -5,9 +5,9 @@ module StallHandler (
 );
 
     reg [31:0] prev_in;
-    reg prev_stall, prev_prev_stall, occupied;
+    reg prev_stall, occupied;
 
-    assign out = occupied && prev_stall && !prev_prev_stall ? prev_in : in;
+    assign out = occupied && prev_stall ? prev_in : in;
 
     always @(posedge clk) begin
         if (reset) begin
@@ -18,7 +18,6 @@ module StallHandler (
             occupied <= 1'b1;
         end
         prev_stall <= stall;
-        prev_prev_stall <= prev_stall;
     end
     
 endmodule
