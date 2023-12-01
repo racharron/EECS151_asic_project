@@ -32,7 +32,7 @@ module Execute (
 
     assign do_jump = is_jump && (!is_branch || condition_true);
 
-    assign address = forward_A + imm;
+    assign address = forwarded_A + imm;
     assign store_address = {address[31:2], 2'd0};
     assign bwe = mem_we ? store_bytes : 4'h0;
 
