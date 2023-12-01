@@ -136,7 +136,7 @@ module cache #
 
   assign meta_wmask = 4'hF;
   assign meta_we = in_miss && !next_state_is_miss;
-  assign meta_din_tag = tag;
+  assign meta_din_tag = prev_tag;
   
   genvar i;
   generate
@@ -241,7 +241,7 @@ module cache #
             async_cache <= data_din[prev_word[1:0]];
           end
         end
-        if (!next_state_is_miss) begin
+        if (in_miss && !next_state_is_miss) begin
           meta_present[prev_index] <= 1'b1;
         end
       end
