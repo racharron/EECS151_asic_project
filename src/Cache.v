@@ -152,13 +152,38 @@ module cache #
     end
   endgenerate
 
-  sram22_256x32m4w8 sramData[3:0] (
+  sram22_256x32m4w8 sramData0 (
     .clk(clk),
-    .we(data_we),
+    .we(data_we[0]),
     .wmask(state == WRITE_QUERY ? prev_req_write : 4'hF),
     .addr(data_addr),
-    .din(data_din),
-    .dout(data_dout)
+    .din(data_din[0]),
+    .dout(data_dout[0])
+  );    
+
+  sram22_256x32m4w8 sramData1 (
+    .clk(clk),
+    .we(data_we[1]),
+    .wmask(state == WRITE_QUERY ? prev_req_write : 4'hF),
+    .addr(data_addr),
+    .din(data_din[1]),
+    .dout(data_dout[1])
+  );    
+  sram22_256x32m4w8 sramData2 (
+    .clk(clk),
+    .we(data_we[2]),
+    .wmask(state == WRITE_QUERY ? prev_req_write : 4'hF),
+    .addr(data_addr),
+    .din(data_din[2]),
+    .dout(data_dout[2])
+  );    
+  sram22_256x32m4w8 sramData3 (
+    .clk(clk),
+    .we(data_we[3]),
+    .wmask(state == WRITE_QUERY ? prev_req_write : 4'hF),
+    .addr(data_addr),
+    .din(data_din[3]),
+    .dout(data_dout[3])
   );        
 
 

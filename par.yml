@@ -61,7 +61,7 @@ vlsi.inputs.placement_constraints:
     top_layer: M3
 
     #SRAM1RW256x128
-  - path: "riscv_top/mem/icache/sramData"
+  - path: "riscv_top/mem/icache/sramData[3:0]"
     type: hardmacro
     x: 50 
     y: 120
@@ -69,7 +69,7 @@ vlsi.inputs.placement_constraints:
     top_layer: M3
 
     #SRAM1RW256x128
-  - path: "riscv_top/mem/dcache/sramData"
+  - path: "riscv_top/mem/dcache/sramData[3:0]"
     type: hardmacro
     x: 250
     y: 120
