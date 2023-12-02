@@ -61,7 +61,28 @@ vlsi.inputs.placement_constraints:
     top_layer: M3
 
     #SRAM1RW256x128
-  - path: "riscv_top/mem/icache/sramData[3:0]"
+  - path: "riscv_top/mem/icache/sramData0"
+    type: hardmacro
+    x: 50 
+    y: 120
+    orientation: "mx90"
+    top_layer: M3
+
+  - path: "riscv_top/mem/icache/sramData1"
+    type: hardmacro
+    x: 50 
+    y: 120
+    orientation: "mx90"
+    top_layer: M3
+
+  - path: "riscv_top/mem/icache/sramData2"
+    type: hardmacro
+    x: 50 
+    y: 120
+    orientation: "mx90"
+    top_layer: M3
+
+  - path: "riscv_top/mem/icache/sramData3"
     type: hardmacro
     x: 50 
     y: 120
@@ -69,7 +90,28 @@ vlsi.inputs.placement_constraints:
     top_layer: M3
 
     #SRAM1RW256x128
-  - path: "riscv_top/mem/dcache/sramData[3:0]"
+  - path: "riscv_top/mem/dcache/sramData0"
+    type: hardmacro
+    x: 250
+    y: 120
+    orientation: "r270"
+    top_layer: M3
+
+  - path: "riscv_top/mem/dcache/sramData1"
+    type: hardmacro
+    x: 250
+    y: 120
+    orientation: "r270"
+    top_layer: M3
+
+  - path: "riscv_top/mem/dcache/sramData2"
+    type: hardmacro
+    x: 250
+    y: 120
+    orientation: "r270"
+    top_layer: M3
+
+  - path: "riscv_top/mem/dcache/sramData3"
     type: hardmacro
     x: 250
     y: 120
