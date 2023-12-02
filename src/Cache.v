@@ -147,7 +147,7 @@ module cache #
         || (state == WRITE_QUERY && in_hit && prev_word[1:0] == i[1:0])
         || (state == CACHE_WRITE_MISS && !line_present && mem_resp_valid);
       assign data_din[i] = (state == WRITE_QUERY && in_hit) ? prev_req_data : mem_resp_data[CPU_WIDTH*i+:CPU_WIDTH];
-      assign meta_din_dirty[i] = (state == WRITE_QUERY && in_hit && prev_word[1:0] == i[1:0]) || line_dirty_blocks[i];
+      assign meta_din_dirty[i] = (state == WRITE_QUERY && in_hit && prev_word[3:2] == i[1:0]) || line_dirty_blocks[i];
     end
   endgenerate
 
