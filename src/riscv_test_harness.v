@@ -186,14 +186,17 @@ module rocketTestHarness;
     end
     if (|dut.dcache_we) begin
       vmem[dut.dcache_addr] = dut.dcache_din;
-      if (dut.dcache_addr == 32'h319c) begin
-        
-      end
     end
     if (!dut.stall) begin
       prev_addr = dut.dcache_addr;
     end
   end
+  hardcoded_mem_zeroed:
+  assert property (
+    @(posedge clk) disable iff (r_reset)
+    mem.ram['h2ff][32*2+:32] != 0 |=> mem.ram['h2ff][32*2+:32] != 0
+  ) 
+  else   $error("%d ns: mem[2ff8] != %h", $time, $past(mem.ram['h2ff][32*2+:32]));
 
 `endif
 

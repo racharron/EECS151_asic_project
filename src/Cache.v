@@ -145,9 +145,10 @@ module cache #
     for (i = 0; i < 4; i = i + 1) begin
       assign data_we[i] = (state == CACHE_READ_MISS && mem_resp_valid)
         || (state == WRITE_QUERY && in_hit && prev_word[1:0] == i[1:0])
-        || (state == CACHE_WRITE_MISS && !line_present && mem_resp_valid);
+        || (state == CACHE_WRITE_MISS && (!line_present || !saving_line) && mem_resp_valid);
       assign data_din[i] = (state == WRITE_QUERY && in_hit) ? prev_req_data : mem_resp_data[CPU_WIDTH*i+:CPU_WIDTH];
-      assign meta_din_dirty[i] = (state == WRITE_QUERY && in_hit && prev_word[3:2] == i[1:0]) || line_dirty_blocks[i];
+      assign meta_din_dirty[i] = (state == WRITE_QUERY && in_hit && prev_word[3:2] == i[1:0]) 
+        || (state == WRITE_QUERY && in_hit && !previously_in_miss ? meta_dout_dirty[i] : line_dirty_blocks[i]);
     end
   endgenerate
 
@@ -227,7 +228,7 @@ module cache #
         prev_req_data <= cpu_req_data;
         prev_req_write <= cpu_req_write;
       end
-      if (state == READ_QUERY || state == WRITE_QUERY && next_state_is_miss) begin
+      if ((state == READ_QUERY || state == WRITE_QUERY) && next_state_is_miss) begin
         current_cache_block <= 2'd0;
         line_present <= meta_dout_present;
         line_dirty_blocks <= meta_dout_dirty;
@@ -236,17 +237,17 @@ module cache #
       if (state == READ_QUERY) begin
         prev_resp <= cpu_resp_data;
       end
+      if (saving_line && mem_req_data_ready) begin
+        line_dirty_blocks[current_dirty_block] <= 1'b0;
+      end
       if (in_miss) begin
-        if (line_is_dirty && mem_req_ready) begin
-          line_dirty_blocks[current_dirty_block] <= 1'b0;
-        end
         if (mem_resp_valid && !line_is_dirty) begin
           current_cache_block <= current_cache_block + 2'd1;
           if (state == CACHE_READ_MISS && current_cache_block == prev_word[3:2]) begin
             async_cache <= data_din[prev_word[1:0]];
           end
         end
-        if (in_miss && !next_state_is_miss) begin
+        if (!next_state_is_miss) begin
           meta_present[prev_index] <= 1'b1;
         end
       end
