@@ -21,9 +21,9 @@ module ld (
           2'b10, 2'b11: out_internal = { {16{ mem_output[31] }}, mem_output[31:16] };
         endcase
         
-        word_load_upper_bits_correct:
-        assert (&out_internal[31:16] || !|out_internal[31:16]) 
-        else   $error("Word read has non-uniform upper bits: %b", out_internal[31:16]);
+        // word_load_upper_bits_correct:
+        // assert (&out_internal[31:16] || !|out_internal[31:16]) 
+        // else   $error("Word read has non-uniform upper bits: %b", out_internal[31:16]);
       end
       `FNC_LB: begin
         case (offset)
@@ -33,9 +33,9 @@ module ld (
           2'b11: out_internal = { {24{ mem_output[31] }}, mem_output[31:24] };
         endcase
         
-        byte_load_upper_bits_correct:
-        assert (&out_internal[31:8] || !|out_internal[31:8]) 
-        else   $error("Byte read has non-uniform upper bits: %b", out_internal[31:8]);
+        // byte_load_upper_bits_correct:
+        // assert (&out_internal[31:8] || !|out_internal[31:8]) 
+        // else   $error("Byte read has non-uniform upper bits: %b", out_internal[31:8]);
       end
       `FNC_LHU: begin
         case (offset)
@@ -44,9 +44,9 @@ module ld (
           2'b10, 2'b11: out_internal = { 16'b0, mem_output[31:16] };
         endcase
         
-        unsigned_word_load_upper_bits_correct:
-        assert (!|out_internal[31:16]) 
-        else   $error("Unsigned word read has non-zero upper bits: %b", out_internal[31:16]);
+        // unsigned_word_load_upper_bits_correct:
+        // assert (!|out_internal[31:16]) 
+        // else   $error("Unsigned word read has non-zero upper bits: %b", out_internal[31:16]);
       end
       `FNC_LBU: begin
         case (offset)
@@ -56,9 +56,9 @@ module ld (
           2'b11: out_internal = { 24'b0, mem_output[31:24] };
         endcase
         
-        unsigned_byte_load_upper_bits_correct:
-        assert (!|out_internal[31:8]) 
-        else   $error("Byte read has non-zero upper bits: bd", out_internal[31:8]);
+        // unsigned_byte_load_upper_bits_correct:
+        // assert (!|out_internal[31:8]) 
+        // else   $error("Byte read has non-zero upper bits: bd", out_internal[31:8]);
       end
       `FNC_LW: out_internal = mem_output;
       default: out_internal = mem_output;

@@ -33,8 +33,8 @@ module Store (
                 else   $error("Word write mask has %d bits", $countones(bwe));
             end
             default: begin
-                bwe <= 4'b0000;
-                write_out <= 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
+                bwe = 4'b0000;
+                write_out = 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
             end
         endcase
     end
