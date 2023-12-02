@@ -166,26 +166,27 @@ module rocketTestHarness;
     end
     if (dut.mem.drespv) begin
       if (vmem.exists(prev_addr)) begin
+        mem_dcache_mismatch_write:
         assert (vmem[prev_addr] == dut.dcache_dout)
         else $error(
-            "%s: mem[%h] = %h, cache = %h",
+            "%d ns: mem[%h] = %h, cache = %h",
             $time,
             $sampled(prev_addr),
             vmem[$sampled(prev_addr)],
             $sampled(dut.dcache_dout)
           );
       end else begin
-        assert (mem.ram[prev_addr] == dut.dcache_dout)
+        mem_dcache_mismatch_read:
+        assert (mem.ram[prev_addr[31:4]][32*prev_addr[3:2]+:32] == dut.dcache_dout)
         else $error(
             "%d ns: mem[%h] = %h, cache = %h",
             $time,
             $sampled(prev_addr),
-            mem.ram[$sampled(prev_addr)],
+            mem.ram[$sampled(prev_addr[31:4])][32*prev_addr[3:2]+:32],
             $sampled(dut.dcache_dout)
           );
       end 
     end
-    prev_addr = dut.dcache_re;
     if (!dut.stall) begin
       prev_addr = dut.dcache_addr;
     end
