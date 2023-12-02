@@ -161,9 +161,6 @@ module rocketTestHarness;
   int vmem [int];
   int prev_addr;
   always @(posedge clk) begin
-    if (|dut.dcache_we) begin
-      vmem[dut.dcache_addr] = dut.dcache_din;
-    end
     if (dut.mem.drespv) begin
       if (vmem.exists(prev_addr)) begin
         mem_dcache_mismatch_write:
@@ -186,6 +183,12 @@ module rocketTestHarness;
             $sampled(dut.dcache_dout)
           );
       end 
+    end
+    if (|dut.dcache_we) begin
+      vmem[dut.dcache_addr] = dut.dcache_din;
+      if (dut.dcache_addr == 32'h319c) begin
+        
+      end
     end
     if (!dut.stall) begin
       prev_addr = dut.dcache_addr;
