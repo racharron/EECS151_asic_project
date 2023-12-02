@@ -152,6 +152,47 @@ module rocketTestHarness;
 `define VCDPLUSCLOSE
 `endif
 
+`ifndef no_cache_mem
+
+  initial begin
+    $timeformat(-9, 0, "ns");
+  end
+
+  int vmem [int];
+  int prev_addr;
+  always @(posedge clk) begin
+    if (|dut.dcache_we) begin
+      vmem[dut.dcache_addr] = dut.dcache_din;
+    end
+    if (dut.mem.drespv) begin
+      if (vmem.exists(prev_addr)) begin
+        assert (vmem[prev_addr] == dut.dcache_dout)
+        else $error(
+            "%s: mem[%h] = %h, cache = %h",
+            $time,
+            $sampled(prev_addr),
+            vmem[$sampled(prev_addr)],
+            $sampled(dut.dcache_dout)
+          );
+      end else begin
+        assert (mem.ram[prev_addr] == dut.dcache_dout)
+        else $error(
+            "%d ns: mem[%h] = %h, cache = %h",
+            $time,
+            $sampled(prev_addr),
+            mem.ram[$sampled(prev_addr)],
+            $sampled(dut.dcache_dout)
+          );
+      end 
+    end
+    prev_addr = dut.dcache_re;
+    if (!dut.stall) begin
+      prev_addr = dut.dcache_addr;
+    end
+  end
+
+`endif
+
   // Read input arguments and initialize
   initial
   begin
