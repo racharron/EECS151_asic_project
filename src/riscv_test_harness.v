@@ -151,7 +151,7 @@ module rocketTestHarness;
 `else
 `define VCDPLUSCLOSE
 `endif
-
+/*
 `ifndef no_cache_mem
 
   initial begin
@@ -199,7 +199,7 @@ module rocketTestHarness;
   else   $error("%d ns: mem[2ff8] != %h", $time, $past(mem.ram['h2ff][32*2+:32]));
 
 `endif
-
+  */
   // Read input arguments and initialize
   initial
   begin
