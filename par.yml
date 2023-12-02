@@ -45,6 +45,7 @@ vlsi.inputs.placement_constraints:
     # orientations and locations to achieve good QoR
 
     #SRAM1RW64x32
+    #SIZE 279.45 BY 269.21
   - path: "riscv_top/mem/icache/sramMeta"
     type: hardmacro
     x: 95
@@ -61,6 +62,7 @@ vlsi.inputs.placement_constraints:
     top_layer: M3
 
     #SRAM1RW256x128
+    # SIZE 292.37 BY 358.29 
   - path: "riscv_top/mem/icache/sramData0"
     type: hardmacro
     x: 50 
