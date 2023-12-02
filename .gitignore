@@ -12,6 +12,7 @@ build/
 *.elf
 asm_output
 bmark_output
+bmark_short_output
 *testvectors.input
 
 ### Linux ###
