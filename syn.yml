@@ -21,6 +21,7 @@ verilogSrc: &VERILOG_SRC
   - "src/ld.v"
   - "src/Store.v"
   - "src/StallHandler.v"
+  - "src/MemoryAccess.v"
   # Add more source files here if you need
 
 
