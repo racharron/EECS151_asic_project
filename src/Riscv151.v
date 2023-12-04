@@ -41,7 +41,7 @@ module Riscv151(
   wire [31:0] mem_out;
 
   /// Signals indicating if this instruction should cause a jump.
-  /// jump_3 is also the bubble signal.
+  /// jump_3 is also the flush signal.
   wire do_jump_2, do_jump_3, do_jump_4;
   
   /// The register file write enables for each stage of the pipeline.
@@ -84,7 +84,7 @@ module Riscv151(
 
   /// Indicates if we should turn the following instructions into nops.
   /// Signalled on taken jumps.
-  wire bubble, read_bubble;
+  wire flush, read_bubble;
   /// On reads, we don't know the result for a cycle, so we have to stall all
   /// the instructions in front of it for a cycle.
   wire internal_stall;
@@ -96,7 +96,7 @@ module Riscv151(
 
   assign icache_addr = next_pc;
 
-  assign bubble = do_jump_3;
+  assign flush = do_jump_3;
 
   assign dcache_re = mem_rr_3 && !internal_stall;
 
@@ -190,14 +190,14 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(4)) flags_buffer_1_2(
-    .clk(clk), .rst(reset | (bubble & !internal_stall)),
+    .clk(clk), .rst(reset | (flush & !internal_stall)),
     .ce(!internal_stall),
     .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2}),
     .d({!read_bubble & reg_we_1, !read_bubble & csr_write_1, !read_bubble & mem_we_1, !read_bubble & mem_rr_1})
   );
 
   REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
-    .clk(clk), .rst(reset | (bubble && !internal_stall)),
+    .clk(clk), .rst(reset | (flush && !internal_stall)),
     .ce(!internal_stall),
     .q({reg_we_3, csr_write_3, mem_rr_3, mem_we_3, do_jump_3}),
     .d({reg_we_2, csr_write_2, mem_rr_2, mem_we_2, do_jump_2})
@@ -211,7 +211,7 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(2)) jump_flag_buffer_1_2(
-    .clk(clk), .rst(reset | (bubble & !internal_stall)),
+    .clk(clk), .rst(reset | (flush & !internal_stall)),
     .ce(!internal_stall & !read_bubble),
     .q({is_jump_2, is_branch_2}),
     //  If we had an instruction that both read from memory while jumping, we would need to filter these on read bubbles.
@@ -292,7 +292,7 @@ module Riscv151(
   assign mem_out = dcache_dout;
 
   DecodeRead stage1(
-      .stall(internal_stall), .bubble(bubble | reset),
+      .stall(internal_stall), .flush(flush | reset),
       .instr(instruction),
 
       .s2_reg_we(reg_we_2), .s2_rd(rd_2), .s2_mem_rr(mem_rr_2),

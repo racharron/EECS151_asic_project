@@ -1,5 +1,5 @@
 module DecodeRead (
-    input stall, bubble,
+    input stall, flush,
     input [31:0] instr,
 
     input s2_reg_we, s2_mem_rr,
@@ -57,6 +57,6 @@ module DecodeRead (
 
     assign s2_read_bubble = s2_mem_rr && s2_reg_we && (((a_sel_reg || is_branch) && rs1 != 5'd0 && rs1 == s2_rd) || ((b_sel_reg || is_branch) && rs2 != 5'd0 && rs2 == s2_rd));
     assign s3_read_bubble = s3_mem_rr && s3_reg_we && (((a_sel_reg || is_branch) && rs1 != 5'd0 && rs1 == s3_rd) || ((b_sel_reg || is_branch) && rs2 != 5'd0 && rs2 == s3_rd));
-    assign read_bubble = !bubble && (s2_read_bubble || s3_read_bubble);
+    assign read_bubble = !flush && (s2_read_bubble || s3_read_bubble);
     
 endmodule
