@@ -11,7 +11,7 @@ module Execute (
     input a_sel_reg,// a_forwards_prev, a_forwards_wb,
     input b_sel_reg,// b_forwards_prev, b_forwards_wb,
 
-    output do_jump, read_bubble,
+    output do_jump,
     output [31:0] result, store_data
 );
     wire [31:0] A, B, forwarded_A, forwarded_B;

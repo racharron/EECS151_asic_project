@@ -84,7 +84,7 @@ module Riscv151(
 
   /// Indicates if we should turn the following instructions into nops.
   /// Signalled on taken jumps.
-  wire flush, read_bubble;
+  wire flush, bubble;
   /// On reads, we don't know the result for a cycle, so we have to stall all
   /// the instructions in front of it for a cycle.
   wire internal_stall;
@@ -119,7 +119,7 @@ module Riscv151(
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
-    clk, reset, internal_stall | read_bubble,
+    clk, reset, internal_stall | bubble,
     do_jump_3,
     alu_result_3,
     pc_1, next_pc
@@ -128,7 +128,7 @@ module Riscv151(
   /// The outut of this is the vale of PC in the execute stage.
   REGISTER_R_CE#(.N(32)) pc_1_2_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_bubble),
+    .ce(!internal_stall & !bubble),
     .q(pc_2),
     .d(pc_1)
   );
@@ -149,14 +149,14 @@ module Riscv151(
 
   REGISTER_R_CE#(.N(5)) rs1_buffer_1_2(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_bubble),
+    .ce(!internal_stall & !bubble),
     .q(rs1_2),
     .d(rs1_1)
   );
 
   REGISTER_R_CE#(.N(5)) rs2_buffer_1_2(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_bubble),
+    .ce(!internal_stall & !bubble),
     .q(rs2_2),
     .d(rs2_1)
   );
@@ -190,7 +190,7 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(6)) flags_buffer_1_2(
-    .clk(clk), .rst(reset | (flush & !internal_stall) | (read_bubble & !internal_stall)),
+    .clk(clk), .rst(reset | (flush & !internal_stall) | (bubble & !internal_stall)),
     .ce(!internal_stall),
     .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, is_jump_2, is_branch_2}),
     .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1, is_jump_1, is_branch_1})
@@ -212,7 +212,7 @@ module Riscv151(
   
   REGISTER_R_CE#(.N(3)) funct3_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !read_bubble),
+    .ce(!internal_stall & !bubble),
     .q(funct3_2),
     .d(funct3_1)
   );
@@ -233,28 +233,28 @@ module Riscv151(
 
   REGISTER_R_CE#(.N(4)) alu_op_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !read_bubble),
+    .ce(!internal_stall & !bubble),
     .q(alu_op_2),
     .d(alu_op_1)
   );
 
   REGISTER_R_CE#(.N(2)) select_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !read_bubble),
+    .ce(!internal_stall & !bubble),
     .q({a_sel_reg_2, b_sel_reg_2}),
     .d({a_sel_reg_1, b_sel_reg_1})
   );
 
   REGISTER_R_CE#(.N(32)) imm_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !read_bubble),
+    .ce(!internal_stall & !bubble),
     .q(imm_2),
     .d(imm_1)
   );
 
   REGISTER_R_CE#(.N(5)) rd_buffer_1_2(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_bubble),
+    .ce(!internal_stall & !bubble),
     .q(rd_2),
     .d(rd_1)
   );
@@ -298,7 +298,7 @@ module Riscv151(
       .reg_we(reg_we_1), .mem_we(mem_we_1), .mem_rr(mem_rr_1),
       .rd(rd_1), .rs1(rs1_1), .rs2(rs2_1),
       .imm(imm_1),
-      .read_bubble(read_bubble),
+      .bubble(bubble),
       .csr_write(csr_write_1)
   );
 
@@ -317,7 +317,7 @@ module Riscv151(
 
     .a_sel_reg(a_sel_reg_2), .b_sel_reg(b_sel_reg_2),
 
-    .do_jump(do_jump_2), .read_bubble(read_bubble),
+    .do_jump(do_jump_2),
     .result(alu_result_2), .store_data(store_data_2)
   );
 
