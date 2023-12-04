@@ -26,6 +26,8 @@ module Riscv151(
 
   /// Fed into IMEM.
   wire [31:0] next_pc;
+  /// The PC in the fetch stage.
+  wire [31:0] pc_0;
   /// The value of PC in the decode-read stage.
   wire [31:0] pc_1;
   /// The value of PC in the execute stage.
@@ -122,7 +124,24 @@ module Riscv151(
     clk, reset, internal_stall | read_bubble,
     do_jump_3,
     alu_result_3,
-    pc_1, next_pc
+    pc_0, next_pc
+  );
+  
+  /// Delays the instruction to shorten the critical path by keeping icache_dout from being involved
+  /// in determining icache_addr
+  REGISTER_R_CE#(.N(32), .INIT(32'h13)) instr_0_1_buffer(
+    .clk(clk), .rst(reset | (bubble & !internal_stall)),
+    .ce(!internal_stall),
+    .q(instruction),
+    .d(icache_dout)
+  );
+  
+  /// Delays the PC to shorten the critical path.
+  REGISTER_R_CE#(.N(32)) pc_0_1_buffer(
+    .clk(clk), .rst(reset),
+    .ce(!internal_stall & !read_bubble),
+    .q(pc_1),
+    .d(pc_0)
   );
   
   /// The outut of this is the vale of PC in the execute stage.
@@ -190,14 +209,14 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(4)) flags_buffer_1_2(
-    .clk(clk), .rst(reset | (bubble & !internal_stall)),
+    .clk(clk), .rst(reset | (bubble & !internal_stall) | (read_bubble & !internal_stall)),
     .ce(!internal_stall),
     .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2}),
-    .d({!read_bubble & reg_we_1, !read_bubble & csr_write_1, !read_bubble & mem_we_1, !read_bubble & mem_rr_1})
+    .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1})
   );
 
   REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
-    .clk(clk), .rst(reset | (bubble && !internal_stall)),
+    .clk(clk), .rst(reset | (bubble & !internal_stall)),
     .ce(!internal_stall),
     .q({reg_we_3, csr_write_3, mem_rr_3, mem_we_3, do_jump_3}),
     .d({reg_we_2, csr_write_2, mem_rr_2, mem_we_2, do_jump_2})
@@ -281,7 +300,7 @@ module Riscv151(
     .d(rd_3)
   );
 
-  assign instruction = icache_dout;
+  // assign instruction = icache_dout;
   /*
   StallHandler sh (
     clk, stall, reset,
