@@ -6,19 +6,23 @@ module Execute (
     input [2:0] funct3,
 
     input [4:0] rs1, rs2, prev_rd, wb_rd,
-    input prev_reg_we, wb_reg_we, mem_we,
+    input prev_reg_we, wb_reg_we, 
 
-    input a_sel, b_sel,
+    input a_sel_reg,// a_forwards_prev, a_forwards_wb,
+    input b_sel_reg,// b_forwards_prev, b_forwards_wb,
 
-    output do_jump,
+    output do_jump, read_bubble,
     output [31:0] result, store_data
 );
     wire [31:0] A, B, forwarded_A, forwarded_B;
     wire forward_A_alu, forward_B_alu, forward_A_wb, forward_B_wb;
     wire condition_true;
     
-    assign A = a_sel ? forwarded_A : pc;
-    assign B = b_sel ? imm : forwarded_B;
+    assign A = a_sel_reg ? forwarded_A : pc;
+    assign B = b_sel_reg ? forwarded_B : imm;
+
+    //  TODO: fix forwarding
+    //  On read bubbles, the original writeback is lost, and not forwarded properly (???)
 
     assign forwarded_A = forward_A_alu ? previous : forward_A_wb ? writeback : reg_A;
     assign forwarded_B = forward_B_alu ? previous : forward_B_wb ? writeback : reg_B;

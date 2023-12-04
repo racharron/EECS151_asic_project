@@ -17,7 +17,7 @@ module Regfile (
         .clk(clk),
         .d0(din),
         .addr0(wa),
-        .we(we & |wa),
+        .we(we & |wa & !stall),
         .q1(rd_1),
         .addr1(ra1),
         .q2(rd_2), 

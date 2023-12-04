@@ -2,17 +2,20 @@ module DecodeRead (
     input stall, bubble,
     input [31:0] instr,
 
+    input prev_reg_we, prev_mem_rr,
+    input [4:0] prev_rd,
+
     output [3:0] alu_op,
     output is_jump, is_branch,
     output [2:0] funct3,
-    output a_sel, b_sel,
+    output a_sel_reg, b_sel_reg,
     /// Register WE, Memory WE (for stores), Memory Read Request (for loads)
     output reg_we, mem_we, mem_rr,
     /// The immediate shift around amount and rs2 are combined in the same bus.
     output [4:0] rd,
     output [4:0] rs1, rs2,
     output [31:0] imm,
-    output csr_write
+    output read_bubble, csr_write
 );
 
     wire [6:0] opcode, funct7;
@@ -33,19 +36,21 @@ module DecodeRead (
 
     assign is_jump = (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_BRANCH);
     assign is_branch = opcode == `OPC_BRANCH;
-    assign a_sel = (opcode == `OPC_JAL || opcode == `OPC_AUIPC || opcode ==`OPC_BRANCH) ? 1'b0 
+    assign a_sel_reg = (opcode == `OPC_JAL || opcode == `OPC_AUIPC || opcode ==`OPC_BRANCH) ? 1'b0 
         : (opcode == `OPC_STORE || opcode == `OPC_LOAD || opcode == `OPC_ARI_RTYPE 
             || opcode == `OPC_ARI_ITYPE || opcode == `OPC_CSR || opcode == `OPC_JALR) ? 1'b1
         : 1'bx;
-    assign b_sel = (opcode == `OPC_ARI_RTYPE) ? 1'b0
+    assign b_sel_reg = (opcode == `OPC_ARI_RTYPE) ? 1'b1 
         : (opcode == `OPC_LUI || opcode == `OPC_AUIPC || opcode == `OPC_JAL || opcode == `OPC_CSR
             || opcode == `OPC_BRANCH || opcode == `OPC_LOAD || opcode == `OPC_JALR
-            || opcode == `OPC_STORE || opcode == `OPC_ARI_ITYPE) ? 1'b1
+            || opcode == `OPC_STORE || opcode == `OPC_ARI_ITYPE) ? 1'b0
         : 1'bx;
     assign reg_we = (opcode == `OPC_LUI) | (opcode == `OPC_AUIPC) | (opcode == `OPC_JAL) | (opcode == `OPC_JALR) | (opcode == `OPC_LOAD) | (opcode == `OPC_ARI_ITYPE)
         | (opcode == `OPC_ARI_RTYPE);
     assign mem_we = opcode == `OPC_STORE;
     assign mem_rr = opcode == `OPC_LOAD;
     assign csr_write = opcode == `OPC_CSR;
+
+    assign read_bubble = !bubble && prev_mem_rr && prev_reg_we && (((a_sel_reg || is_branch) && rs1 != 5'd0 && rs1 == prev_rd) || ((b_sel_reg || is_branch) && rs2 != 5'd0 && rs2 == prev_rd));
     
 endmodule

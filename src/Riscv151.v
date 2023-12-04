@@ -68,8 +68,8 @@ module Riscv151(
   wire [31:0] writeback;
 
   wire [3:0] alu_op_1, alu_op_2;
-  wire a_sel_1, a_sel_2;
-  wire b_sel_1, b_sel_2;
+  wire a_sel_reg_1, a_sel_reg_2;
+  wire b_sel_reg_1, b_sel_reg_2;
   wire is_jump_1, is_jump_2;
   wire is_branch_1, is_branch_2;
 
@@ -81,10 +81,10 @@ module Riscv151(
 
   /// Indicates if we should turn the following instructions into nops.
   /// Signalled on taken jumps.
-  wire bubble;
+  wire bubble, read_bubble;
   /// On reads, we don't know the result for a cycle, so we have to stall all
   /// the instructions in front of it for a cycle.
-  wire internal_stall, read_stall;
+  wire internal_stall;
 
   assign icache_re = 1'b1;
   /// We also stall for a cycle after reset because otherwise the cache becomes undefined.
@@ -94,8 +94,6 @@ module Riscv151(
   assign icache_addr = next_pc;
 
   assign bubble = do_jump_3;
-
-  assign read_stall = mem_rr_3 && reg_we_3 && (rd_3 == rs1_2 || rd_3 == rs2_2);
 
   assign dcache_re = mem_rr_3 && !internal_stall;
 
@@ -118,7 +116,7 @@ module Riscv151(
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
-    clk, reset, internal_stall | read_stall,
+    clk, reset, internal_stall | read_bubble,
     do_jump_3,
     alu_result_3,
     pc_1, next_pc
@@ -127,14 +125,14 @@ module Riscv151(
   /// The outut of this is the vale of PC in the execute stage.
   REGISTER_R_CE#(.N(32)) pc_1_2_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall & !read_bubble),
     .q(pc_2),
     .d(pc_1)
   );
   /// The output of this is the value of PC in the memjump stage.
   REGISTER_R_CE#(.N(32)) pc_2_3_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall),
     .q(pc_3),
     .d(pc_2)
   );
@@ -148,28 +146,28 @@ module Riscv151(
 
   REGISTER_R_CE#(.N(5)) rs1_buffer_1_2(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall & !read_bubble),
     .q(rs1_2),
     .d(rs1_1)
   );
 
   REGISTER_R_CE#(.N(5)) rs2_buffer_1_2(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall & !read_bubble),
     .q(rs2_2),
     .d(rs2_1)
   );
 
   REGISTER_R_CE#(.N(5)) rs2_buffer_2_3(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall),
     .q(rs2_3),
     .d(rs2_2)
   );
 
   REGISTER_R_CE#(.N(32)) result_2_3_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall),
     .q(alu_result_3),
     .d(alu_result_2)
   );
@@ -183,23 +181,23 @@ module Riscv151(
 
   REGISTER_R_CE#(.N(32)) store_data_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall),
     .q(store_data_3),
     .d(store_data_2)
   );
 
   REGISTER_R_CE#(.N(4)) flags_buffer_1_2(
     .clk(clk), .rst(reset | (bubble & !internal_stall)),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall),
     .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2}),
-    .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1})
+    .d({!read_bubble & reg_we_1, !read_bubble & csr_write_1, !read_bubble & mem_we_1, !read_bubble & mem_rr_1})
   );
 
   REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
     .clk(clk), .rst(reset | (bubble && !internal_stall)),
     .ce(!internal_stall),
     .q({reg_we_3, csr_write_3, mem_rr_3, mem_we_3, do_jump_3}),
-    .d({!read_stall & reg_we_2, !read_stall & csr_write_2, !read_stall & mem_rr_2, !read_stall & mem_we_2, !read_stall & do_jump_2})
+    .d({reg_we_2, csr_write_2, mem_rr_2, mem_we_2, do_jump_2})
   );
 
   REGISTER_R_CE#(.N(4)) flags_buffer_3_4(
@@ -211,21 +209,22 @@ module Riscv151(
 
   REGISTER_R_CE#(.N(2)) jump_flag_buffer_1_2(
     .clk(clk), .rst(reset | (bubble & !internal_stall)),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall & !read_bubble),
     .q({is_jump_2, is_branch_2}),
+    //  If we had an instruction that both read from memory while jumping, we would need to filter these on read bubbles.
     .d({is_jump_1, is_branch_1})
   );
 
   REGISTER_R_CE#(.N(3)) funct3_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall & !read_bubble),
     .q(funct3_2),
     .d(funct3_1)
   );
 
   REGISTER_R_CE#(.N(3)) funct3_buffer_2_3(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall),
     .q(funct3_3),
     .d(funct3_2)
   );
@@ -239,35 +238,35 @@ module Riscv151(
 
   REGISTER_R_CE#(.N(4)) alu_op_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall & !read_bubble),
     .q(alu_op_2),
     .d(alu_op_1)
   );
 
   REGISTER_R_CE#(.N(2)) select_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !read_stall),
-    .q({a_sel_2, b_sel_2}),
-    .d({a_sel_1, b_sel_1})
+    .ce(!internal_stall & !read_bubble),
+    .q({a_sel_reg_2, b_sel_reg_2}),
+    .d({a_sel_reg_1, b_sel_reg_1})
   );
 
   REGISTER_R_CE#(.N(32)) imm_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall & !read_bubble),
     .q(imm_2),
     .d(imm_1)
   );
 
   REGISTER_R_CE#(.N(5)) rd_buffer_1_2(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall & !read_bubble),
     .q(rd_2),
     .d(rd_1)
   );
 
   REGISTER_R_CE#(.N(5)) rd_buffer_2_3(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !read_stall),
+    .ce(!internal_stall),
     .q(rd_3),
     .d(rd_2)
   );
@@ -285,17 +284,20 @@ module Riscv151(
   assign mem_out = dcache_dout;
 
   DecodeRead stage1(
-      .stall(internal_stall | read_stall), .bubble(bubble | reset),
+      .stall(internal_stall), .bubble(bubble | reset),
       .instr(instruction),
+
+      .prev_reg_we(reg_we_2), .prev_rd(rd_2), .prev_mem_rr(mem_rr_2),
 
       .alu_op(alu_op_1),
       .is_jump(is_jump_1),
       .is_branch(is_branch_1),
       .funct3(funct3_1),
-      .a_sel(a_sel_1), .b_sel(b_sel_1),
+      .a_sel_reg(a_sel_reg_1), .b_sel_reg(b_sel_reg_1),
       .reg_we(reg_we_1), .mem_we(mem_we_1), .mem_rr(mem_rr_1),
       .rd(rd_1), .rs1(rs1_1), .rs2(rs2_1),
       .imm(imm_1),
+      .read_bubble(read_bubble),
       .csr_write(csr_write_1)
   );
 
@@ -311,11 +313,10 @@ module Riscv151(
 
     .prev_reg_we(reg_we_3),
     .wb_reg_we(reg_we_4),
-    .mem_we(mem_we_2),
 
-    .a_sel(a_sel_2), .b_sel(b_sel_2),
+    .a_sel_reg(a_sel_reg_2), .b_sel_reg(b_sel_reg_2),
 
-    .do_jump(do_jump_2),
+    .do_jump(do_jump_2), .read_bubble(read_bubble),
     .result(alu_result_2), .store_data(store_data_2)
   );
 
