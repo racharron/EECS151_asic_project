@@ -189,11 +189,11 @@ module Riscv151(
     .d(store_data_2)
   );
 
-  REGISTER_R_CE#(.N(4)) flags_buffer_1_2(
-    .clk(clk), .rst(reset | (flush & !internal_stall)),
+  REGISTER_R_CE#(.N(6)) flags_buffer_1_2(
+    .clk(clk), .rst(reset | (flush & !internal_stall) | (read_bubble & !internal_stall)),
     .ce(!internal_stall),
-    .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2}),
-    .d({!read_bubble & reg_we_1, !read_bubble & csr_write_1, !read_bubble & mem_we_1, !read_bubble & mem_rr_1})
+    .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, is_jump_2, is_branch_2}),
+    .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1, is_jump_1, is_branch_1})
   );
 
   REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
@@ -209,15 +209,7 @@ module Riscv151(
     .q({reg_we_4, csr_write_4, mem_rr_4, do_jump_4}),
     .d({reg_we_3, csr_write_3, mem_rr_3, do_jump_3})
   );
-
-  REGISTER_R_CE#(.N(2)) jump_flag_buffer_1_2(
-    .clk(clk), .rst(reset | (flush & !internal_stall)),
-    .ce(!internal_stall & !read_bubble),
-    .q({is_jump_2, is_branch_2}),
-    //  If we had an instruction that both read from memory while jumping, we would need to filter these on read bubbles.
-    .d({is_jump_1, is_branch_1})
-  );
-
+  
   REGISTER_R_CE#(.N(3)) funct3_buffer_1_2(
     .clk(clk), .rst(1'b0),
     .ce(!internal_stall & !read_bubble),
