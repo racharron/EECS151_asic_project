@@ -65,7 +65,10 @@ module Riscv151(
   wire [31:0] imm_1, imm_2;
 
   /// The value that is written to the register file
-  wire [31:0] writeback;
+  /// Internal writeback is the writeback, but disconnected from memory to reduce the critical
+  /// path.  Instructions that depend directly on an immediately preceding load have to wait two
+  /// cycles.
+  wire [31:0] writeback, internal_wb;
 
   wire [3:0] alu_op_1, alu_op_2;
   wire a_sel_reg_1, a_sel_reg_2;
@@ -279,7 +282,12 @@ module Riscv151(
   );
 
   assign instruction = icache_dout;
-
+  /*
+  StallHandler sh (
+    clk, stall, reset,
+    icache_dout, instruction
+  );
+  */
   // StallHandler stall_handler(clk, internal_stall, reset, dcache_dout, mem_out);
   assign mem_out = dcache_dout;
 
@@ -287,7 +295,8 @@ module Riscv151(
       .stall(internal_stall), .bubble(bubble | reset),
       .instr(instruction),
 
-      .prev_reg_we(reg_we_2), .prev_rd(rd_2), .prev_mem_rr(mem_rr_2),
+      .s2_reg_we(reg_we_2), .s2_rd(rd_2), .s2_mem_rr(mem_rr_2),
+      .s3_reg_we(reg_we_3), .s3_rd(rd_3), .s3_mem_rr(mem_rr_3),
 
       .alu_op(alu_op_1),
       .is_jump(is_jump_1),
@@ -303,7 +312,7 @@ module Riscv151(
 
   Execute stage2(
     .pc(pc_2), .reg_A(reg_A_2), .reg_B(reg_B_2),
-    .imm(imm_2), .previous(alu_result_3), .writeback(writeback),
+    .imm(imm_2), .previous(alu_result_3), .writeback(internal_wb),
 
     .alu_op(alu_op_2),
     .is_jump(is_jump_2), .is_branch(is_branch_2),
@@ -336,7 +345,7 @@ module Riscv151(
     .funct3(funct3_4),
     .reg_we(reg_we_4), .mem_rr(mem_rr_4), .do_jump(do_jump_4),
     .dcache_dout(mem_out),
-    .writeback(writeback)
+    .writeback(writeback), .internal_wb(internal_wb)
   );
 
   always @(posedge clk) prev_reset <= reset;

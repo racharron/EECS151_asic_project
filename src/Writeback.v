@@ -6,7 +6,7 @@ module Writeback (
   input [2:0] funct3,
   input reg_we, mem_rr, do_jump,
 
-  output [31:0] writeback
+  output [31:0] writeback, internal_wb
 );
   
   
@@ -24,5 +24,6 @@ module Writeback (
   assign writeback = jalr ? pc + 32'd4
     : mem_rr ? masked_load
     : alu_result;
+  assign internal_wb = jalr ? pc + 32'd4 : alu_result;
   
 endmodule

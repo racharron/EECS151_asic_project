@@ -2,8 +2,10 @@ module DecodeRead (
     input stall, bubble,
     input [31:0] instr,
 
-    input prev_reg_we, prev_mem_rr,
-    input [4:0] prev_rd,
+    input s2_reg_we, s2_mem_rr,
+    input [4:0] s2_rd,
+    input s3_reg_we, s3_mem_rr,
+    input [4:0] s3_rd,
 
     output [3:0] alu_op,
     output is_jump, is_branch,
@@ -30,6 +32,8 @@ module DecodeRead (
         imm
     );
 
+    wire s2_read_bubble, s3_read_bubble;
+
     ALUdec alu_dec(opcode, funct3, add_rshift_type, alu_op);
 
     assign add_rshift_type = funct7[5];
@@ -51,6 +55,8 @@ module DecodeRead (
     assign mem_rr = opcode == `OPC_LOAD;
     assign csr_write = opcode == `OPC_CSR;
 
-    assign read_bubble = !bubble && prev_mem_rr && prev_reg_we && (((a_sel_reg || is_branch) && rs1 != 5'd0 && rs1 == prev_rd) || ((b_sel_reg || is_branch) && rs2 != 5'd0 && rs2 == prev_rd));
+    assign s2_read_bubble = s2_mem_rr && s2_reg_we && (((a_sel_reg || is_branch) && rs1 != 5'd0 && rs1 == s2_rd) || ((b_sel_reg || is_branch) && rs2 != 5'd0 && rs2 == s2_rd));
+    assign s3_read_bubble = s3_mem_rr && s3_reg_we && (((a_sel_reg || is_branch) && rs1 != 5'd0 && rs1 == s3_rd) || ((b_sel_reg || is_branch) && rs2 != 5'd0 && rs2 == s3_rd));
+    assign read_bubble = !bubble && (s2_read_bubble || s3_read_bubble);
     
 endmodule
