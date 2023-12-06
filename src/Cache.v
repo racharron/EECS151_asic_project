@@ -211,7 +211,7 @@ module cache #
       end
       READ_QUERY: begin
         if (in_hit) begin
-          if (!cpu_req_valid || !cpu_req_ready) next_state = IDLE;
+          if (!cpu_req_valid) next_state = IDLE;
         end else begin
           next_state = CACHE_READ_MISS;
         end

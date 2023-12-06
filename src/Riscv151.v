@@ -13,7 +13,8 @@ module Riscv151(
     output [31:0] dcache_din,
     input [31:0] dcache_dout,
     input [31:0] icache_dout,
-    input stall,
+    input icache_req_ready, icache_resp_valid,
+    input dcache_req_ready, dcache_resp_valid,
     output [31:0] csr
 
 );
@@ -89,10 +90,12 @@ module Riscv151(
   /// the instructions in front of it for a cycle.
   wire internal_stall;
 
+  reg waiting_for_dcache;
+
   assign icache_re = 1'b1;
   /// We also stall for a cycle after reset because otherwise the cache becomes undefined.
   /// This is a hack, but it works.
-  assign internal_stall = stall; // | (prev_reset & !stall);
+  assign internal_stall = !icache_req_ready || !icache_resp_valid || !dcache_req_ready & (mem_rr_3 | mem_we_3) || !dcache_resp_valid & waiting_for_dcache;
 
   assign icache_addr = next_pc;
 
@@ -101,9 +104,9 @@ module Riscv151(
   assign dcache_re = mem_rr_3 && !internal_stall;
 
   Regfile regfile(
-    .clk(clk), .stall(internal_stall),
+    .clk(clk),
     .we(reg_we_4),
-    .ra1(rs1_1), .ra2(rs2_1), .wa(rd_4),
+    .ra1(internal_stall ? rs1_2 : rs1_1), .ra2(internal_stall ? rs2_2 : rs2_1), .wa(rd_4),
     .wd(writeback),
     .rd1(reg_A_2), .rd2(reg_B_2)
   );
@@ -203,11 +206,17 @@ module Riscv151(
     .d({reg_we_2, csr_write_2, mem_rr_2, mem_we_2, do_jump_2})
   );
 
-  REGISTER_R_CE#(.N(4)) flags_buffer_3_4(
+  REGISTER_R_CE#(.N(2)) reg_we_flags_buffer_3_4(
+    .clk(clk), .rst(reset || internal_stall & mem_rr_4 & !waiting_for_dcache || internal_stall & !mem_rr_4 & (reg_we_4 | csr_write_4)),
+    .ce(!internal_stall),
+    .q({reg_we_4, csr_write_4}),
+    .d({reg_we_3, csr_write_3})
+  );
+  REGISTER_R_CE#(.N(2)) meta_flags_buffer_3_4(
     .clk(clk), .rst(reset),
     .ce(!internal_stall),
-    .q({reg_we_4, csr_write_4, mem_rr_4, do_jump_4}),
-    .d({reg_we_3, csr_write_3, mem_rr_3, do_jump_3})
+    .q({do_jump_4, mem_rr_4}),
+    .d({do_jump_3, mem_rr_3})
   );
   
   REGISTER_R_CE#(.N(3)) funct3_buffer_1_2(
@@ -331,7 +340,6 @@ module Riscv151(
   );
 
   Writeback stage4 (
-    .clk(clk),
     .pc(pc_4),
     .alu_result(alu_result_4),
     .funct3(funct3_4),
@@ -340,6 +348,16 @@ module Riscv151(
     .writeback(writeback), .internal_wb(internal_wb)
   );
 
-  always @(posedge clk) prev_reset <= reset;
-
+  always @(posedge clk) begin
+    prev_reset <= reset;
+    if (reset) begin
+      waiting_for_dcache <= 1'b0;
+    end else begin
+      if (!internal_stall && mem_rr_3) begin
+        waiting_for_dcache <= 1'b1;
+      end else if (dcache_resp_valid) begin
+        waiting_for_dcache <= 1'b0;
+      end
+    end
+  end
 endmodule

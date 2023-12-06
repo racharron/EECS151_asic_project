@@ -1,5 +1,4 @@
 module Writeback (
-  input clk,
   input [31:0] pc,
   input [31:0] alu_result,
   input [31:0] dcache_dout,
