@@ -60,7 +60,7 @@ module Riscv151(
   wire [4:0] rs2_1, rs2_2, rs2_3;
 
   /// The A and B values from the registers for each stage of the pipeline.
-  wire [31:0] reg_A_no_stall, reg_B_no_stall, reg_A_stall, reg_B_stall, reg_A_2, reg_B_2;
+  wire [31:0] reg_A_2, reg_B_2;
 
   /// The generated immediates across the first two stages of the pipeline.
   wire [31:0] imm_1, imm_2;
@@ -90,7 +90,6 @@ module Riscv151(
   /// the instructions in front of it for a cycle.
   /// We need to allow the PC to propagate through, so it needs to start one cycle ahead of everything else.
   wire pc_stall, icache_stall, dcache_stall;
-  reg prev_pc_stall;
 
   reg waiting_for_dcache, waiting_for_icache;
   /// TODO: fine grained stalls (what about simultaneous dcache and icache stalls), and/or adding fetch stage to act as buffer for bubble
@@ -104,23 +103,15 @@ module Riscv151(
   assign dcache_re = mem_rr_3 && !dcache_stall;
 
   /// Duplicated register files
-  Regfile regfile_no_stall(
+  Regfile regfile(
     .clk(clk),
+    .stall(pc_stall),
     .we(reg_we_4),
     .ra1(rs1_1), .ra2(rs2_1), .wa(rd_4),
+    .prev_ra1(rs1_2), .prev_ra2(rs2_2),
     .wd(writeback),
-    .rd1(reg_A_no_stall), .rd2(reg_B_no_stall)
+    .rd1(reg_A_2), .rd2(reg_B_2)
   );
-  Regfile regfile_stall(
-    .clk(clk),
-    .we(reg_we_4),
-    .ra1(rs1_2), .ra2(rs2_2), .wa(rd_4),
-    .wd(writeback),
-    .rd1(reg_A_stall), .rd2(reg_B_stall)
-  );
-
-  assign reg_A_2 = prev_pc_stall ? reg_A_stall : reg_A_no_stall;
-  assign reg_B_2 = prev_pc_stall ? reg_B_stall : reg_B_no_stall;
 
   /// The special CSR register used to communicate with the testbench.
   REGISTER_R_CE#(.N(32)) tohost(
@@ -368,7 +359,6 @@ module Riscv151(
 
   always @(posedge clk) begin
     prev_reset <= reset;
-    prev_pc_stall <= pc_stall;
     if (reset) begin
       waiting_for_dcache <= 1'b0;
       waiting_for_icache <= 1'b0;

@@ -18,6 +18,7 @@ module Execute (
 );
     wire [31:0] A, B, forwarded_A, forwarded_B;
     wire forward_A_alu, forward_B_alu, forward_A_wb, forward_B_wb;
+    wire prev_bubble, wb_bubble;
     wire condition_true;
     
     assign A = a_sel_reg ? forwarded_A : pc;
