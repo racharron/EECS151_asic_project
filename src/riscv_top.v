@@ -30,13 +30,17 @@ module riscv_top
   wire [31:0]   icache_addr; // From cpu of Riscv151.v
   wire [31:0]   icache_dout; // From mem of Memory151.v
   wire          icache_re;   // From cpu of Riscv151.v
-  wire          stall;       // From mem of Memory151.v
+  wire icache_resp_valid, icache_req_ready;
+  wire dcache_resp_valid, dcache_req_ready;
 
   Memory151 mem(
     // Outputs
     .dcache_dout(dcache_dout[31:0]),
     .icache_dout(icache_dout[31:0]),
-    .stall(stall),
+    .icache_req_ready(icache_req_ready),
+    .icache_resp_valid(icache_resp_valid),
+    .dcache_req_ready(dcache_req_ready),
+    .dcache_resp_valid(dcache_resp_valid),
     .mem_req_valid(mem_req_valid),
     .mem_req_rw(mem_req_rw),
     .mem_req_addr(mem_req_addr[`MEM_ADDR_BITS-1:0]),
@@ -74,7 +78,10 @@ module riscv_top
       .dcache_dout(dcache_dout[31:0]),
       .icache_dout(icache_dout[31:0]),
       .csr(csr),
-      .stall(stall));
-
+      .icache_req_ready(icache_req_ready),
+      .icache_resp_valid(icache_resp_valid),
+      .dcache_req_ready(dcache_req_ready),
+      .dcache_resp_valid(dcache_resp_valid)
+  );
 endmodule
 

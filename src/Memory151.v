@@ -12,7 +12,8 @@ module Memory151(
   input  [31:0] dcache_din,
   output [31:0] dcache_dout,
   output [31:0] icache_dout,
-  output        stall,
+  output icache_req_ready, icache_resp_valid,
+  output dcache_req_ready, dcache_resp_valid,
 
   // Arbiter <=> Main memory interface
   output                       mem_req_valid,
@@ -32,9 +33,6 @@ module Memory151(
 
 );
 
-wire i_stall_n;
-wire d_stall_n;
-
 wire ic_mem_req_valid;
 wire ic_mem_req_ready;
 wire [`MEM_ADDR_BITS-1:0]  ic_mem_req_addr;
@@ -53,11 +51,11 @@ no_cache_mem icache (
   .clk(clk),
   .reset(reset),
   .cpu_req_valid(icache_re),
-  .cpu_req_ready(i_stall_n),
+  .cpu_req_ready(icache_req_ready),
   .cpu_req_addr(icache_addr[31:2]),
   .cpu_req_data(), // core does not write to icache
   .cpu_req_write(4'b0), // never write
-  .cpu_resp_valid(),
+  .cpu_resp_valid(icache_resp_valid),
   .cpu_resp_data(icache_dout)
 );
 
@@ -65,25 +63,24 @@ no_cache_mem dcache (
   .clk(clk),
   .reset(reset),
   .cpu_req_valid((| dcache_we) || dcache_re),
-  .cpu_req_ready(d_stall_n),
+  .cpu_req_ready(dcache_req_ready),
   .cpu_req_addr(dcache_addr[31:2]),
   .cpu_req_data(dcache_din),
   .cpu_req_write(dcache_we),
-  .cpu_resp_valid(),
+  .cpu_resp_valid(dcache_resp_valid),
   .cpu_resp_data(dcache_dout)
 );
-assign stall =  ~i_stall_n || ~d_stall_n;
 
 `else
 cache icache (
   .clk(clk),
   .reset(reset),
   .cpu_req_valid(icache_re),
-  .cpu_req_ready(i_stall_n),
+  .cpu_req_ready(icache_req_ready),
   .cpu_req_addr(icache_addr[31:2]),
   .cpu_req_data(), // core does not write to icache
   .cpu_req_write(4'b0), // never write
-  .cpu_resp_valid(),
+  .cpu_resp_valid(icache_resp_valid),
   .cpu_resp_data(icache_dout),
   .mem_req_valid(ic_mem_req_valid),
   .mem_req_ready(ic_mem_req_ready),
@@ -97,23 +94,15 @@ cache icache (
   .mem_resp_data(mem_resp_data)
 );
 
-`ifndef no_cache_mem
-wire drespv;
-`endif
-
 cache dcache (
   .clk(clk),
   .reset(reset),
   .cpu_req_valid((| dcache_we) || dcache_re),
-  .cpu_req_ready(d_stall_n),
+  .cpu_req_ready(dcache_req_ready),
   .cpu_req_addr(dcache_addr[31:2]),
   .cpu_req_data(dcache_din),
   .cpu_req_write(dcache_we),
-  .cpu_resp_valid(/*
-`ifndef no_cache_mem
-  drespv
-`endif
-  */),
+  .cpu_resp_valid(dcache_resp_valid),
   .cpu_resp_data(dcache_dout),
   .mem_req_valid(dc_mem_req_valid),
   .mem_req_ready(dc_mem_req_ready),
@@ -126,7 +115,6 @@ cache dcache (
   .mem_resp_valid(dc_mem_resp_valid),
   .mem_resp_data(mem_resp_data)
 );
-assign stall =  ~i_stall_n || ~d_stall_n;
 
 //                           ICache 
 //                         /        \
