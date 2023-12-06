@@ -1,11 +1,5 @@
 module DecodeRead (
-    input stall, flush,
     input [31:0] instr,
-
-    input s2_reg_we, s2_mem_rr,
-    input [4:0] s2_rd,
-    input s3_reg_we, s3_mem_rr,
-    input [4:0] s3_rd,
 
     output [3:0] alu_op,
     output is_jump, is_branch,
@@ -54,9 +48,5 @@ module DecodeRead (
     assign mem_we = opcode == `OPC_STORE;
     assign mem_rr = opcode == `OPC_LOAD;
     assign csr_write = opcode == `OPC_CSR;
-
-    assign s2_bubble = s2_mem_rr && s2_reg_we && (((a_sel_reg || is_branch) && rs1 != 5'd0 && rs1 == s2_rd) || ((b_sel_reg || mem_we || is_branch) && rs2 != 5'd0 && rs2 == s2_rd));
-    assign s3_bubble = s3_mem_rr && s3_reg_we && (((a_sel_reg || is_branch) && rs1 != 5'd0 && rs1 == s3_rd) || ((b_sel_reg || mem_we || is_branch) && rs2 != 5'd0 && rs2 == s3_rd));
-    assign bubble = !flush && (s2_bubble || s3_bubble);
     
 endmodule

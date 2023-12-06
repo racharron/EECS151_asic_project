@@ -85,28 +85,28 @@ module Riscv151(
 
   /// Indicates if we should turn the following instructions into nops.
   /// Signalled on taken jumps.
-  wire flush, bubble;
+  wire bubble;
   /// On reads, we don't know the result for a cycle, so we have to stall all
   /// the instructions in front of it for a cycle.
-  wire internal_stall;
+  /// We need to allow the PC to propagate through, so it needs to start one cycle ahead of everything else.
+  wire pc_stall, icache_stall, dcache_stall;
 
-  reg waiting_for_dcache;
-
-  assign icache_re = 1'b1;
-  /// We also stall for a cycle after reset because otherwise the cache becomes undefined.
-  /// This is a hack, but it works.
-  assign internal_stall = !icache_req_ready || !icache_resp_valid || !dcache_req_ready & (mem_rr_3 | mem_we_3) || !dcache_resp_valid & waiting_for_dcache;
+  reg waiting_for_dcache, waiting_for_icache;
+  reg startup;
+  /// TODO: fine grained stalls (what about simultaneous dcache and icache stalls), and/or adding fetch stage to act as buffer for bubble
+  assign icache_re = !pc_stall && !do_jump_2;
+  assign icache_stall = !icache_resp_valid & waiting_for_icache || !icache_req_ready;
+  assign dcache_stall = !dcache_req_ready & (mem_rr_3 | mem_we_3) || !dcache_resp_valid & waiting_for_dcache;
+  assign pc_stall = bubble || icache_stall || dcache_stall;
 
   assign icache_addr = next_pc;
 
-  assign flush = do_jump_3;
-
-  assign dcache_re = mem_rr_3 && !internal_stall;
+  assign dcache_re = mem_rr_3 && !dcache_stall;
 
   Regfile regfile(
     .clk(clk),
     .we(reg_we_4),
-    .ra1(internal_stall ? rs1_2 : rs1_1), .ra2(internal_stall ? rs2_2 : rs2_1), .wa(rd_4),
+    .ra1(pc_stall ? rs1_2 : rs1_1), .ra2(pc_stall ? rs2_2 : rs2_1), .wa(rd_4),
     .wd(writeback),
     .rd1(reg_A_2), .rd2(reg_B_2)
   );
@@ -122,182 +122,185 @@ module Riscv151(
   /// This holds the PC value used for getting the next instruction.  
   /// It has to be delayed due to memory being synchronous.
   ProgramCounter pc(
-    clk, reset, internal_stall | bubble,
-    do_jump_3,
-    alu_result_3,
-    pc_1, next_pc
+    clk, reset, pc_stall,
+    do_jump_2,
+    alu_result_2,
+    next_pc
   );
   
   /// The outut of this is the vale of PC in the execute stage.
+  REGISTER_R_CE#(.N(32)) pc_next_1_buffer(
+    .clk(clk), .rst(reset),
+    .ce(!pc_stall),
+    .q(pc_1),
+    .d(next_pc)
+  );
+  /// The outut of this is the vale of PC in the execute stage.
   REGISTER_R_CE#(.N(32)) pc_1_2_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !bubble),
+    .ce(!pc_stall),
     .q(pc_2),
     .d(pc_1)
   );
   /// The output of this is the value of PC in the memjump stage.
   REGISTER_R_CE#(.N(32)) pc_2_3_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(pc_3),
     .d(pc_2)
   );
   /// The output of this is the value of PC in the writeback stage.
   REGISTER_R_CE#(.N(32)) pc_3_4_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(pc_4),
     .d(pc_3)
   );
 
   REGISTER_R_CE#(.N(5)) rs1_buffer_1_2(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !bubble),
+    .ce(!pc_stall),
     .q(rs1_2),
     .d(rs1_1)
   );
 
   REGISTER_R_CE#(.N(5)) rs2_buffer_1_2(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !bubble),
+    .ce(!pc_stall),
     .q(rs2_2),
     .d(rs2_1)
   );
 
   REGISTER_R_CE#(.N(5)) rs2_buffer_2_3(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(rs2_3),
     .d(rs2_2)
   );
 
   REGISTER_R_CE#(.N(32)) result_2_3_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(alu_result_3),
     .d(alu_result_2)
   );
 
   REGISTER_R_CE#(.N(32)) result_3_4_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(alu_result_4),
     .d(alu_result_3)
   );
 
   REGISTER_R_CE#(.N(32)) store_data_buffer(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(store_data_3),
     .d(store_data_2)
   );
 
   REGISTER_R_CE#(.N(6)) flags_buffer_1_2(
-    .clk(clk), .rst(reset | (flush & !internal_stall) | (bubble & !internal_stall)),
-    .ce(!internal_stall),
+    .clk(clk), .rst(reset || (do_jump_2 | do_jump_3) & !pc_stall),
+    .ce(!pc_stall),
     .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, is_jump_2, is_branch_2}),
     .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1, is_jump_1, is_branch_1})
   );
 
   REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
-    .clk(clk), .rst(reset | (flush && !internal_stall)),
-    .ce(!internal_stall),
+    .clk(clk), .rst(reset || (pc_stall | do_jump_3) & !dcache_stall),
+    .ce(!dcache_stall & !icache_stall),
     .q({reg_we_3, csr_write_3, mem_rr_3, mem_we_3, do_jump_3}),
     .d({reg_we_2, csr_write_2, mem_rr_2, mem_we_2, do_jump_2})
   );
 
   REGISTER_R_CE#(.N(2)) reg_we_flags_buffer_3_4(
-    .clk(clk), .rst(reset || internal_stall & mem_rr_4 & !waiting_for_dcache || internal_stall & !mem_rr_4 & (reg_we_4 | csr_write_4)),
-    .ce(!internal_stall),
+    .clk(clk), .rst(reset || dcache_stall & mem_rr_4 & !waiting_for_dcache || dcache_stall & !mem_rr_4),
+    .ce(!dcache_stall),
     .q({reg_we_4, csr_write_4}),
     .d({reg_we_3, csr_write_3})
   );
   REGISTER_R_CE#(.N(2)) meta_flags_buffer_3_4(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q({do_jump_4, mem_rr_4}),
     .d({do_jump_3, mem_rr_3})
   );
   
   REGISTER_R_CE#(.N(3)) funct3_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !bubble),
+    .ce(!pc_stall),
     .q(funct3_2),
     .d(funct3_1)
   );
 
   REGISTER_R_CE#(.N(3)) funct3_buffer_2_3(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(funct3_3),
     .d(funct3_2)
   );
 
   REGISTER_R_CE#(.N(3)) funct3_buffer_3_4(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(funct3_4),
     .d(funct3_3)
   );
 
   REGISTER_R_CE#(.N(4)) alu_op_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !bubble),
+    .ce(!pc_stall),
     .q(alu_op_2),
     .d(alu_op_1)
   );
 
   REGISTER_R_CE#(.N(2)) select_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !bubble),
+    .ce(!pc_stall),
     .q({a_sel_reg_2, b_sel_reg_2}),
     .d({a_sel_reg_1, b_sel_reg_1})
   );
 
   REGISTER_R_CE#(.N(32)) imm_buffer_1_2(
     .clk(clk), .rst(1'b0),
-    .ce(!internal_stall & !bubble),
+    .ce(!pc_stall),
     .q(imm_2),
     .d(imm_1)
   );
 
   REGISTER_R_CE#(.N(5)) rd_buffer_1_2(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall & !bubble),
+    .ce(!pc_stall),
     .q(rd_2),
     .d(rd_1)
   );
 
   REGISTER_R_CE#(.N(5)) rd_buffer_2_3(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(rd_3),
     .d(rd_2)
   );
 
   REGISTER_R_CE#(.N(5)) rd_buffer_3_4(
     .clk(clk), .rst(reset),
-    .ce(!internal_stall),
+    .ce(!dcache_stall),
     .q(rd_4),
     .d(rd_3)
   );
 
-  assign instruction = icache_dout;
-  /*
+  // assign instruction = icache_dout;
+  
   StallHandler sh (
-    clk, stall, reset,
+    clk, bubble, reset,
     icache_dout, instruction
   );
-  */
+  
   // StallHandler stall_handler(clk, internal_stall, reset, dcache_dout, mem_out);
   assign mem_out = dcache_dout;
 
   DecodeRead stage1(
-      .stall(internal_stall), .flush(flush | reset),
       .instr(instruction),
-
-      .s2_reg_we(reg_we_2), .s2_rd(rd_2), .s2_mem_rr(mem_rr_2),
-      .s3_reg_we(reg_we_3), .s3_rd(rd_3), .s3_mem_rr(mem_rr_3),
 
       .alu_op(alu_op_1),
       .is_jump(is_jump_1),
@@ -307,7 +310,6 @@ module Riscv151(
       .reg_we(reg_we_1), .mem_we(mem_we_1), .mem_rr(mem_rr_1),
       .rd(rd_1), .rs1(rs1_1), .rs2(rs2_1),
       .imm(imm_1),
-      .bubble(bubble),
       .csr_write(csr_write_1)
   );
 
@@ -320,18 +322,23 @@ module Riscv151(
     .funct3(funct3_2),
 
     .rs1(rs1_2), .rs2(rs2_2), .prev_rd(rd_3), .wb_rd(rd_4),
+    .mem_we(mem_we_2),
+    .prev_mem_rr(mem_rr_3),
+    .wb_mem_rr(mem_rr_4),
+
 
     .prev_reg_we(reg_we_3),
     .wb_reg_we(reg_we_4),
 
     .a_sel_reg(a_sel_reg_2), .b_sel_reg(b_sel_reg_2),
 
+    .bubble(bubble),
     .do_jump(do_jump_2),
     .result(alu_result_2), .store_data(store_data_2)
   );
 
   MemoryAccess stage3 (
-    .stall(internal_stall), .mem_we(mem_we_3),
+    .mem_we(mem_we_3),
     .funct3(funct3_3),
     .alu_result(alu_result_3),
     .bwe(dcache_we),
@@ -352,11 +359,18 @@ module Riscv151(
     prev_reset <= reset;
     if (reset) begin
       waiting_for_dcache <= 1'b0;
+      waiting_for_icache <= 1'b0;
+      startup <= 1'b1;
     end else begin
-      if (!internal_stall && mem_rr_3) begin
+      if (dcache_re && !dcache_stall) begin
         waiting_for_dcache <= 1'b1;
       end else if (dcache_resp_valid) begin
         waiting_for_dcache <= 1'b0;
+      end
+      if (icache_re && !icache_stall && !dcache_stall) begin
+        waiting_for_icache <= 1'b1;
+      end else if (icache_resp_valid) begin
+        waiting_for_icache <= 1'b0;
       end
     end
   end
