@@ -60,7 +60,7 @@ module Riscv151(
   wire [4:0] rs2_1, rs2_2, rs2_3;
 
   /// The A and B values from the registers for each stage of the pipeline.
-  wire [31:0] reg_A_2, reg_B_2;
+  wire [31:0] reg_A_no_stall, reg_B_no_stall, reg_A_stall, reg_B_stall, reg_A_2, reg_B_2;
 
   /// The generated immediates across the first two stages of the pipeline.
   wire [31:0] imm_1, imm_2;
@@ -90,9 +90,9 @@ module Riscv151(
   /// the instructions in front of it for a cycle.
   /// We need to allow the PC to propagate through, so it needs to start one cycle ahead of everything else.
   wire pc_stall, icache_stall, dcache_stall;
+  reg prev_pc_stall;
 
   reg waiting_for_dcache, waiting_for_icache;
-  reg startup;
   /// TODO: fine grained stalls (what about simultaneous dcache and icache stalls), and/or adding fetch stage to act as buffer for bubble
   assign icache_re = !pc_stall && !do_jump_2;
   assign icache_stall = !icache_resp_valid & waiting_for_icache || !icache_req_ready;
@@ -103,13 +103,24 @@ module Riscv151(
 
   assign dcache_re = mem_rr_3 && !dcache_stall;
 
-  Regfile regfile(
+  /// Duplicated register files
+  Regfile regfile_no_stall(
     .clk(clk),
     .we(reg_we_4),
-    .ra1(pc_stall ? rs1_2 : rs1_1), .ra2(pc_stall ? rs2_2 : rs2_1), .wa(rd_4),
+    .ra1(rs1_1), .ra2(rs2_1), .wa(rd_4),
     .wd(writeback),
-    .rd1(reg_A_2), .rd2(reg_B_2)
+    .rd1(reg_A_no_stall), .rd2(reg_B_no_stall)
   );
+  Regfile regfile_stall(
+    .clk(clk),
+    .we(reg_we_4),
+    .ra1(rs1_2), .ra2(rs2_2), .wa(rd_4),
+    .wd(writeback),
+    .rd1(reg_A_stall), .rd2(reg_B_stall)
+  );
+
+  assign reg_A_2 = prev_pc_stall ? reg_A_stall : reg_A_no_stall;
+  assign reg_B_2 = prev_pc_stall ? reg_B_stall : reg_B_no_stall;
 
   /// The special CSR register used to communicate with the testbench.
   REGISTER_R_CE#(.N(32)) tohost(
@@ -357,10 +368,10 @@ module Riscv151(
 
   always @(posedge clk) begin
     prev_reset <= reset;
+    prev_pc_stall <= pc_stall;
     if (reset) begin
       waiting_for_dcache <= 1'b0;
       waiting_for_icache <= 1'b0;
-      startup <= 1'b1;
     end else begin
       if (dcache_re && !dcache_stall) begin
         waiting_for_dcache <= 1'b1;
