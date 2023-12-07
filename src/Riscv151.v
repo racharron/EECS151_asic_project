@@ -46,6 +46,9 @@ module Riscv151(
   /// Signals indicating if this instruction should cause a jump.
   /// jump_3 is also the flush signal.
   wire do_jump_2, do_jump_3, do_jump_4;
+
+  /// So that the ALU is not a critical path for jumps.
+  wire [31:0] jump_target;
   
   /// The register file write enables for each stage of the pipeline.
   wire reg_we_1, reg_we_2, reg_we_3, reg_we_4;
@@ -120,7 +123,7 @@ module Riscv151(
     .clk(clk), .rst(reset),
     .ce(csr_write_4),
     .q(csr),
-    .d(writeback)
+    .d(internal_wb)
   );
   
   /// This holds the PC value used for getting the next instruction.  
@@ -128,7 +131,7 @@ module Riscv151(
   ProgramCounter pc(
     clk, reset, pc_stall,
     do_jump_2,
-    alu_result_2,
+    jump_target,
     next_pc
   );
   
@@ -353,7 +356,8 @@ module Riscv151(
 
     .bubble(bubble),
     .do_jump(do_jump_2),
-    .result(alu_result_2), .store_data(store_data_2)
+    .result(alu_result_2), .store_data(store_data_2),
+    .jump_target(jump_target)
   );
 
   MemoryAccess stage3 (

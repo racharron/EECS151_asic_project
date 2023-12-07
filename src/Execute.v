@@ -14,7 +14,7 @@ module Execute (
     input b_sel_reg,// b_forwards_prev, b_forwards_wb,
 
     output bubble, do_jump,
-    output [31:0] result, store_data
+    output [31:0] result, store_data, jump_target
 );
     wire [31:0] A, B, forwarded_A, forwarded_B;
     wire forward_A_alu, forward_B_alu, forward_A_wb, forward_B_wb;
@@ -33,6 +33,7 @@ module Execute (
     assign forward_B_wb = rs2 == wb_rd && wb_rd != 5'd0 && wb_reg_we;
 
     assign do_jump = is_jump && (!is_branch || condition_true);
+    assign jump_target = A + B;
 
     assign store_data = forwarded_B;
 
