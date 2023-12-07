@@ -1,11 +1,11 @@
 module Writeback (
   input [31:0] pc,
   input [31:0] alu_result,
-  input [31:0] dcache_dout,
+  input [31:0] raw_read,
   input [2:0] funct3,
   input reg_we, mem_rr, do_jump,
 
-  output [31:0] writeback, internal_wb
+  output [31:0] writeback
 );
   
   
@@ -13,8 +13,8 @@ module Writeback (
   wire [31:0] masked_load;
 
   ld mask (
-    .mem_address(alu_result),
-    .mem_output(dcache_dout),
+    .offset(alu_result[1:0]),
+    .mem_output(raw_read),
     .funct3(funct3),
     .load_out(masked_load)
   );
@@ -23,6 +23,5 @@ module Writeback (
   assign writeback = jalr ? pc + 32'd4
     : mem_rr ? masked_load
     : alu_result;
-  assign internal_wb = jalr ? pc + 32'd4 : alu_result;
   
 endmodule

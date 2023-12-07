@@ -1,7 +1,7 @@
 `include "Opcode.vh"
 
 module ld (
-  input [31:0] mem_address,
+  input [1:0] offset,
   input [31:0] mem_output,
   input [2:0] funct3,
   output [31:0] load_out
@@ -9,8 +9,6 @@ module ld (
   reg [31:0] out_internal;
   
   //Spec: https://inst.eecs.berkeley.edu/~eecs151/fa23/static/asic/project/docs/pg3-ckpt2/#misaligned-addresses
-  wire [1:0] offset;
-  assign offset = mem_address[1:0];
 
   always @(*) begin
     case (funct3)
