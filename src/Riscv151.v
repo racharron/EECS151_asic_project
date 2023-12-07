@@ -27,6 +27,8 @@ module Riscv151(
 
   /// Fed into IMEM.
   wire [31:0] next_pc;
+  /// The value of PC in the fetch stage.
+  wire [31:0] pc_0;
   /// The value of PC in the decode-read stage.
   wire [31:0] pc_1;
   /// The value of PC in the execute stage.
@@ -37,7 +39,7 @@ module Riscv151(
   wire [31:0] pc_4;
 
   /// The instruction that stage 1 can see.  Outputted by the stall handler.
-  wire [31:0] instruction;
+  wire [31:0] instruction_0, instruction_1;
   /// We need to deal with potential stalls immediately after loads, so we need to save the dcache_dout in that case.
   wire [31:0] mem_out;
 
@@ -131,11 +133,26 @@ module Riscv151(
   );
   
   /// The outut of this is the vale of PC in the execute stage.
-  REGISTER_R_CE#(.N(32)) pc_next_1_buffer(
+  REGISTER_R_CE#(.N(32), .INIT(32'h13)) instruction_0_1_buffer(
+    .clk(clk), .rst(reset || (do_jump_2 | do_jump_3) & !pc_stall),
+    .ce(!pc_stall),
+    .q(instruction_1),
+    .d(instruction_0)
+  );
+  
+  /// The outut of this is the vale of PC in the execute stage.
+  REGISTER_R_CE#(.N(32)) pc_next_0_buffer(
+    .clk(clk), .rst(reset),
+    .ce(!pc_stall),
+    .q(pc_0),
+    .d(next_pc)
+  );
+  /// The outut of this is the vale of PC in the execute stage.
+  REGISTER_R_CE#(.N(32)) pc_0_1_buffer(
     .clk(clk), .rst(reset),
     .ce(!pc_stall),
     .q(pc_1),
-    .d(next_pc)
+    .d(pc_0)
   );
   /// The outut of this is the vale of PC in the execute stage.
   REGISTER_R_CE#(.N(32)) pc_1_2_buffer(
@@ -202,7 +219,7 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(6)) flags_buffer_1_2(
-    .clk(clk), .rst(reset || (do_jump_2 | do_jump_3) & !pc_stall),
+    .clk(clk), .rst(reset || (do_jump_2 | do_jump_3 | do_jump_4) & !pc_stall),
     .ce(!pc_stall),
     .q({reg_we_2, csr_write_2, mem_we_2, mem_rr_2, is_jump_2, is_branch_2}),
     .d({reg_we_1, csr_write_1, mem_we_1, mem_rr_1, is_jump_1, is_branch_1})
@@ -295,14 +312,14 @@ module Riscv151(
   
   StallHandler sh (
     clk, bubble, reset,
-    icache_dout, instruction
+    icache_dout, instruction_0
   );
   
   // StallHandler stall_handler(clk, internal_stall, reset, dcache_dout, mem_out);
   assign mem_out = dcache_dout;
 
   DecodeRead stage1(
-      .instr(instruction),
+      .instr(instruction_1),
 
       .alu_op(alu_op_1),
       .is_jump(is_jump_1),
