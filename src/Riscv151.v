@@ -138,7 +138,7 @@ module Riscv151(
   
   /// The outut of this is the vale of PC in the execute stage.
   REGISTER_R_CE#(.N(32), .INIT(32'h13)) instruction_0_1_buffer(
-    .clk(clk), .rst(reset || ((do_jump_2 | do_jump_3) & !bubble & !dcache_stall) || icache_stall),
+    .clk(clk), .rst(reset || ((do_jump_2 | do_jump_3) & !bubble & !dcache_stall)),
     .ce((icache_resp_valid & waiting_for_icache || !waiting_for_icache) & !bubble & !dcache_stall),
     .q(instruction_1),
     .d(instruction_0)
@@ -202,7 +202,7 @@ module Riscv151(
 
   REGISTER_CE#(.N(32)) result_2_3_buffer(
     .clk(clk),
-    .ce(!dcache_stall),
+    .ce(!dcache_stall & !icache_stall),
     .q(alu_result_3),
     .d(alu_result_2)
   );
@@ -235,7 +235,7 @@ module Riscv151(
   );
 
   REGISTER_R_CE#(.N(5)) flags_buffer_2_3(
-    .clk(clk), .rst(reset || (bubble & !dcache_stall)),
+    .clk(clk), .rst(reset || ((bubble | icache_stall) & !dcache_stall)),
     .ce(!dcache_stall),
     .q({reg_we_3, csr_write_3, mem_rr_3, mem_we_3, do_jump_3}),
     .d({reg_we_2, csr_write_2, mem_rr_2, mem_we_2, do_jump_2})
@@ -351,7 +351,7 @@ module Riscv151(
   );
 
   DataSelector ds (
-    .clk(clk),
+    .clk(clk), .stall(bubble | dcache_stall),
     .a_sel_reg(bubble ? a_sel_reg_2 : a_sel_reg_1), .b_sel_reg(bubble ? b_sel_reg_2 : b_sel_reg_1),
     .reg_A_1(reg_A_1), .reg_B_1(reg_B_1), .pc(pc_1), .imm(imm_1),
     .ex_alu_result(alu_result_2), .mem_req_alu_result(alu_result_3), .mem_resp_alu_result(alu_result_4), .writeback(writeback),

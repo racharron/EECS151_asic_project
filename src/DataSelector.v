@@ -1,5 +1,5 @@
 module DataSelector (
-    input clk,
+    input clk, stall,
     input a_sel_reg, b_sel_reg,
     input [31:0] reg_A_1, reg_B_1, pc, imm, ex_alu_result, mem_req_alu_result, mem_resp_alu_result, writeback,
     input [4:0] rs1, rs2,
@@ -8,7 +8,7 @@ module DataSelector (
     output [31:0] reg_A_2, reg_B_2, A_2, B_2
 );
     RegSelector a (
-        .clk(clk),
+        .clk(clk), .stall(stall),
         .sel_reg(a_sel_reg),
         .reg_1(reg_A_1), .other(pc),
         .ex_alu_result(ex_alu_result),
@@ -21,7 +21,7 @@ module DataSelector (
         .reg_2(reg_A_2), .op_2(A_2)
     );
     RegSelector b (
-        .clk(clk),
+        .clk(clk), .stall(stall),
         .sel_reg(b_sel_reg),
         .reg_1(reg_B_1), .other(imm),
         .ex_alu_result(ex_alu_result),

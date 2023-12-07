@@ -1,5 +1,5 @@
 module RegSelector (
-    input clk,
+    input clk, stall,
     input sel_reg,
     input [31:0] reg_1, other, ex_alu_result, mem_req_alu_result, mem_resp_alu_result, writeback,
     input [4:0] rs,
@@ -11,7 +11,7 @@ module RegSelector (
         if (rs == 5'd0) begin
             reg_2 = 32'd0;
         end else begin
-            if (ex_reg_we && rs == ex_rd) reg_2 = ex_alu_result;
+            if (!stall && ex_reg_we && rs == ex_rd) reg_2 = ex_alu_result;
             else if (mem_req_reg_we && rs == mem_req_rd) reg_2 = mem_req_alu_result;
             else if (mem_resp_reg_we && rs == mem_resp_rd) reg_2 = mem_resp_alu_result;
             else if (wb_reg_we && rs == wb_rd) reg_2 = writeback;
