@@ -42,6 +42,7 @@ simVerilogSrc: &SIM_VERILOG_SRC
   - "src/ld.v"
   - "src/Store.v"
   - "src/StallHandler.v"
+  - "src/MemoryAccess.v"
   # Add more files here if you need
 
 #tb_name: &TB_NAME "ALUTestbench"
